@@ -1,287 +1,214 @@
 import {
-  AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, RadarChart,
-  PolarGrid, PolarAngleAxis, Radar,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, Legend,
 } from 'recharts';
+import GaugeChart from './components/GaugeChart';
+import DonutChart from './components/DonutChart';
 import {
-  Activity, Radio, Users, TrendingUp, TrendingDown, AlertTriangle,
-  Wifi, Globe, Smartphone, BarChart3, Signal, Gauge,
-} from 'lucide-react';
-import {
-  networkOverview, kpiData, kqiData, trafficTrend, regionPerformance,
-  userBehavior, alarms,
+  lastDayIndicators, competitors, dataTrafficDistribution, dataTrafficLast7Days,
+  voiceTrafficDistribution, subscribersMaxRAT, subscriberEvolution,
+  voiceKPI, voiceTrafficTrend, dataKPI, trafficVolumeTrend,
 } from './data/networkData';
 import './App.css';
 
-const COLORS = ['#4c8bf5', '#34d399', '#a78bfa', '#22d3ee', '#fbbf24', '#f87171'];
+const fmt = (n) => (n >= 1 ? `${n.toFixed(2)}M` : `${(n * 1000).toFixed(0)}K`);
 
-const formatNum = (n) => {
-  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`;
-  return n.toString();
-};
-
-const KpiCard = ({ label, value, unit, trend, trendDir, color }) => (
-  <div className="card kpi-card">
-    <span className="label">{label}</span>
-    <span className="value" style={{ color }}>
-      {value}<span className="unit">{unit}</span>
-    </span>
-    {trend && (
-      <span className={`trend ${trendDir}`}>
-        {trendDir === 'up' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
-        {trend}
-      </span>
-    )}
+const SidebarStat = ({ value, unit, label, icon, color = '#e4002b' }) => (
+  <div className="sidebar-stat">
+    <div className="sidebar-stat-value" style={{ color }}>{value}<span className="sidebar-stat-unit">{unit}</span></div>
+    <div className="sidebar-stat-icon">{icon}</div>
+    <div className="sidebar-stat-label">{label}</div>
   </div>
 );
 
-const chartTooltipStyle = {
-  backgroundColor: '#1e2235',
-  border: '1px solid #2a2e45',
-  borderRadius: '8px',
-  color: '#e8eaed',
-  fontSize: '12px',
-};
-
-const kqiRadarData = [
-  { metric: 'Video MOS', value: kqiData.videoStreamingMOS * 20, fullMark: 100 },
-  { metric: 'Voice MOS', value: kqiData.voiceMOS * 20, fullMark: 100 },
-  { metric: 'Web Score', value: kqiData.webBrowsingScore, fullMark: 100 },
-  { metric: 'App Speed', value: kqiData.appDownloadSpeed, fullMark: 100 },
-  { metric: 'Video Call', value: kqiData.videoCallQuality * 20, fullMark: 100 },
-  { metric: 'CSAT', value: kqiData.overallCSAT, fullMark: 100 },
-];
-
 function App() {
+  const d = lastDayIndicators;
   return (
-    <div className="dashboard">
-      <header className="dashboard-header">
-        <h1>Network Operations Dashboard</h1>
-        <span className="timestamp">Live | {new Date().toLocaleString()}</span>
-      </header>
+    <div className="report-layout">
+      {/* Left Sidebar */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <div className="brand-logo">ooredoo</div>
+        </div>
+        <div className="sidebar-date-box">
+          <div className="sidebar-date-label">Last day indicators</div>
+          <div className="sidebar-date">{d.date}</div>
+        </div>
+        <SidebarStat value={d.totalActiveSubscribers} unit="M" label="Total Active Subscribers" icon="👥" />
+        <SidebarStat value={d.dataSubscribers} unit="M" label="Data Subscribers" icon="📊" />
+        <SidebarStat value={d.voiceSubscribers} unit="M" label="Voice Subscribers" icon="📞" />
+        <SidebarStat value={d.totalTrafficTB} unit="" label="Total Traffic TB" color="#333" icon="📈" />
+        <SidebarStat value={d.totalVoiceMillionH} unit="M" label="Total Voice Million (H)" color="#333" icon="🔊" />
 
-      {/* Top KPI Cards */}
-      <div className="grid grid-4">
-        <KpiCard label="Network Availability" value={kpiData.availability} unit="%" trend="+0.02%" trendDir="up" color="var(--accent-green)" />
-        <KpiCard label="Avg DL Throughput" value={kpiData.avgThroughputDL} unit=" Mbps" trend="+3.2%" trendDir="up" color="var(--accent-blue)" />
-        <KpiCard label="Active Subscribers" value={formatNum(networkOverview.activeSubscribers)} unit="" trend="+1.8%" trendDir="up" color="var(--accent-cyan)" />
-        <KpiCard label="Call Drop Rate" value={kpiData.callDropRate} unit="%" trend="-0.05%" trendDir="up" color="var(--accent-green)" />
-      </div>
-
-      {/* Network Overview + Alarms */}
-      <div className="grid grid-2">
-        <div className="card">
-          <h3 className="section-title"><Radio size={18} /> Network Overview</h3>
-          <div className="overview-stats">
-            <div className="stat-item">
-              <div className="stat-value" style={{ color: 'var(--accent-blue)' }}>{formatNum(networkOverview.totalSites)}</div>
-              <div className="stat-label">Total Sites</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value" style={{ color: 'var(--accent-green)' }}>{formatNum(networkOverview.activeSites)}</div>
-              <div className="stat-label">Active Sites</div>
-            </div>
-            <div className="stat-item">
-              <div className="stat-value" style={{ color: 'var(--accent-red)' }}>{networkOverview.sitesDown}</div>
-              <div className="stat-label">Sites Down</div>
-            </div>
+        <div className="sidebar-cei">
+          <div className="cei-label">Customer<br />Experience Index</div>
+          <div className="cei-value">{d.customerExperienceIndex}</div>
+          <div className="cei-bar">
+            <div className="cei-fill" style={{ width: `${d.customerExperienceIndex}%` }} />
           </div>
-          {networkOverview.technologies.map((tech, i) => (
-            <div className="tech-bar" key={tech.name}>
-              <span className="tech-name">{tech.name}</span>
-              <div className="bar-container">
-                <div className="bar-fill" style={{ width: `${tech.coverage}%`, background: COLORS[i] }} />
-              </div>
-              <span className="tech-value">{tech.coverage}%</span>
+        </div>
+
+        <div className="sidebar-map">
+          <svg viewBox="0 0 100 120" width="100%" style={{ maxWidth: 140 }}>
+            <ellipse cx="50" cy="55" rx="35" ry="50" fill="#f9e4b7" stroke="#e4002b" strokeWidth="1" />
+            <circle cx="45" cy="35" r="3" fill="#e4002b" opacity="0.6" />
+            <circle cx="55" cy="45" r="2.5" fill="#e4002b" opacity="0.5" />
+            <circle cx="40" cy="55" r="2" fill="#e4002b" opacity="0.4" />
+            <circle cx="55" cy="60" r="3.5" fill="#e4002b" opacity="0.7" />
+            <circle cx="48" cy="75" r="2" fill="#e4002b" opacity="0.3" />
+          </svg>
+        </div>
+
+        <div className="sidebar-competitors">
+          <div className="competitor-title">EnodeBs Number</div>
+          <div className="competitor-subtitle">(source Ookla)<br />Last update 29/03/2026</div>
+          {competitors.map(c => (
+            <div className="competitor-item" key={c.name}>
+              <div className="competitor-logo" style={{ color: c.color }}>{c.name}</div>
+              <div className="competitor-count" style={{ color: c.color }}>{c.enodeBs.toLocaleString()}</div>
             </div>
           ))}
         </div>
-        <div className="card">
-          <h3 className="section-title"><AlertTriangle size={18} /> Active Alarms</h3>
-          <div className="alarm-list">
-            {alarms.map(a => (
-              <div className={`alarm-item ${a.severity}`} key={a.id}>
-                <div className={`severity-dot ${a.severity}`} />
-                <span className="alarm-site">{a.site}</span>
-                <span className="alarm-msg">{a.message}</span>
-                <span className="alarm-time">{a.time}</span>
+      </aside>
+
+      {/* Main Content */}
+      <main className="main-content">
+        <header className="report-header">
+          <div className="header-badge">Daily Service Quality Report</div>
+          <div className="header-right">SOC &<br />Network Performance</div>
+        </header>
+
+        {/* Distribution Charts */}
+        <section className="section-row three-col">
+          <div className="card">
+            <DonutChart data={dataTrafficDistribution} title="Data Traffic Distribution" />
+          </div>
+          <div className="card">
+            <DonutChart data={dataTrafficLast7Days} title="Data Traffic Distribution Last 7 Days" />
+          </div>
+          <div className="card">
+            <DonutChart data={voiceTrafficDistribution} title="Voice Traffic Distribution" />
+          </div>
+        </section>
+
+        {/* Subscriber Evolution + RAT Distribution */}
+        <section className="section-row two-col-wide">
+          <div className="card" style={{ flex: 2 }}>
+            <div className="card-title">Subscribers Service Distribution Evolution</div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={subscriberEvolution} barSize={8}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis dataKey="month" fontSize={9} tick={{ fill: '#888' }} tickLine={false} />
+                <YAxis fontSize={9} tick={{ fill: '#888' }} tickLine={false} tickFormatter={v => `${(v/1e6).toFixed(0)}M`} />
+                <Tooltip contentStyle={{ fontSize: 11 }} formatter={v => `${(v/1e6).toFixed(2)}M`} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Bar dataKey="voiceOnly" name="Voice only" fill="#999" stackId="a" />
+                <Bar dataKey="voiceAndData" name="Voice + Data" fill="#f5b0b0" stackId="a" />
+                <Bar dataKey="dataOnly" name="Data only" fill="#e0e0e0" stackId="a" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="card" style={{ flex: 1 }}>
+            <DonutChart data={subscribersMaxRAT} title="Subscribers Max RAT Distribution" size={180} innerRadius={50} outerRadius={72} />
+          </div>
+        </section>
+
+        {/* Voice KPI */}
+        <section className="section-block">
+          <h2 className="section-heading">Voice KPI</h2>
+          <div className="kpi-gauges-row">
+            <div className="kpi-gauge-card">
+              <GaugeChart value={voiceKPI.callSetupSR} label="Call Setup SR %" size={130} thresholds={{ good: 95, warn: 90 }} />
+              <div className="gauge-subs">
+                <span>MO <b>{voiceKPI.mo}</b></span>
+                <span>MT <b>{voiceKPI.mt}</b></span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Traffic Trend */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <h3 className="section-title"><Activity size={18} /> Traffic Trend (24h)</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={trafficTrend}>
-            <defs>
-              <linearGradient id="gradBlue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#4c8bf5" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="#4c8bf5" stopOpacity={0} />
-              </linearGradient>
-              <linearGradient id="gradGreen" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#34d399" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="#34d399" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#2a2e45" />
-            <XAxis dataKey="hour" stroke="#9aa0b4" fontSize={11} tickLine={false} />
-            <YAxis yAxisId="left" stroke="#9aa0b4" fontSize={11} tickLine={false} />
-            <YAxis yAxisId="right" orientation="right" stroke="#9aa0b4" fontSize={11} tickLine={false} />
-            <Tooltip contentStyle={chartTooltipStyle} />
-            <Area yAxisId="left" type="monotone" dataKey="dataTrafficTB" stroke="#4c8bf5" fill="url(#gradBlue)" name="Data (TB)" />
-            <Area yAxisId="right" type="monotone" dataKey="voiceTrafficErl" stroke="#34d399" fill="url(#gradGreen)" name="Voice (Erl)" />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Network KPIs */}
-      <div className="card" style={{ marginBottom: 24 }}>
-        <h3 className="section-title"><Gauge size={18} /> Network KPIs</h3>
-        <div className="kpi-grid">
-          <div className="kpi-mini">
-            <div className="kpi-val" style={{ color: 'var(--accent-green)' }}>{kpiData.callSetupSuccessRate}%</div>
-            <div className="kpi-lbl">Call Setup Success</div>
-          </div>
-          <div className="kpi-mini">
-            <div className="kpi-val" style={{ color: 'var(--accent-green)' }}>{kpiData.handoverSuccessRate}%</div>
-            <div className="kpi-lbl">Handover Success</div>
-          </div>
-          <div className="kpi-mini">
-            <div className="kpi-val" style={{ color: 'var(--accent-blue)' }}>{kpiData.rrcConnectionSuccessRate}%</div>
-            <div className="kpi-lbl">RRC Connection Success</div>
-          </div>
-          <div className="kpi-mini">
-            <div className="kpi-val" style={{ color: 'var(--accent-blue)' }}>{kpiData.erabSetupSuccessRate}%</div>
-            <div className="kpi-lbl">E-RAB Setup Success</div>
-          </div>
-          <div className="kpi-mini">
-            <div className="kpi-val" style={{ color: 'var(--accent-cyan)' }}>{kpiData.latency} ms</div>
-            <div className="kpi-lbl">Avg Latency</div>
-          </div>
-          <div className="kpi-mini">
-            <div className="kpi-val" style={{ color: 'var(--accent-green)' }}>{kpiData.volteDropRate}%</div>
-            <div className="kpi-lbl">VoLTE Drop Rate</div>
-          </div>
-          <div className="kpi-mini">
-            <div className="kpi-val" style={{ color: 'var(--accent-purple)' }}>{kpiData.prbUtilizationDL}%</div>
-            <div className="kpi-lbl">PRB Util (DL)</div>
-          </div>
-          <div className="kpi-mini">
-            <div className="kpi-val" style={{ color: 'var(--accent-purple)' }}>{kpiData.prbUtilizationUL}%</div>
-            <div className="kpi-lbl">PRB Util (UL)</div>
-          </div>
-        </div>
-      </div>
-
-      {/* KQIs + Region Performance */}
-      <div className="grid grid-2">
-        <div className="card">
-          <h3 className="section-title"><Signal size={18} /> Key Quality Indicators (KQI)</h3>
-          <div style={{ display: 'flex', gap: 16, marginBottom: 16 }}>
-            <div className="kpi-mini" style={{ flex: 1 }}>
-              <div className="kpi-val" style={{ color: 'var(--accent-green)' }}>{kqiData.overallCSAT}%</div>
-              <div className="kpi-lbl">Overall CSAT</div>
-            </div>
-            <div className="kpi-mini" style={{ flex: 1 }}>
-              <div className="kpi-val" style={{ color: 'var(--accent-blue)' }}>{kqiData.nps}</div>
-              <div className="kpi-lbl">NPS Score</div>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <RadarChart data={kqiRadarData}>
-              <PolarGrid stroke="#2a2e45" />
-              <PolarAngleAxis dataKey="metric" tick={{ fill: '#9aa0b4', fontSize: 11 }} />
-              <Radar dataKey="value" stroke="#4c8bf5" fill="#4c8bf5" fillOpacity={0.2} />
-            </RadarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className="card">
-          <h3 className="section-title"><Globe size={18} /> Regional Performance</h3>
-          <table className="region-table">
-            <thead>
-              <tr>
-                <th>Region</th>
-                <th>Availability</th>
-                <th>Throughput</th>
-                <th>Subscribers</th>
-                <th>Satisfaction</th>
-              </tr>
-            </thead>
-            <tbody>
-              {regionPerformance.map(r => (
-                <tr key={r.region}>
-                  <td style={{ fontWeight: 600 }}>{r.region}</td>
-                  <td><span className={`status-badge ${r.availability >= 99.9 ? 'good' : 'warning'}`}>{r.availability}%</span></td>
-                  <td>{r.throughput} Mbps</td>
-                  <td>{formatNum(r.subscribers)}</td>
-                  <td>{r.satisfaction}%</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* User Behavior */}
-      <div className="grid grid-3">
-        <div className="card">
-          <h3 className="section-title"><Smartphone size={18} /> App Data Usage</h3>
-          {userBehavior.appUsage.map((app, i) => (
-            <div className="app-usage-item" key={app.app}>
-              <span className="app-name">{app.app}</span>
-              <div className="app-bar-bg">
-                <div className="app-bar-fill" style={{ width: `${app.percentage}%`, background: COLORS[i] }} />
+              <div className="gauge-subs small">
+                <span>MO CSFB SR % <b>{voiceKPI.moCSFBSR}</b></span>
+                <span>MT CSFB SR % <b>{voiceKPI.mtCSFBSR}</b></span>
               </div>
-              <span className="app-pct">{app.percentage}%</span>
             </div>
-          ))}
-        </div>
-        <div className="card">
-          <h3 className="section-title"><Wifi size={18} /> Device Distribution</h3>
-          <ResponsiveContainer width="100%" height={180}>
-            <PieChart>
-              <Pie data={userBehavior.deviceDistribution} dataKey="percentage" nameKey="type" cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3}>
-                {userBehavior.deviceDistribution.map((_, i) => <Cell key={i} fill={COLORS[i]} />)}
-              </Pie>
-              <Tooltip contentStyle={chartTooltipStyle} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="device-list">
-            {userBehavior.deviceDistribution.map((d, i) => (
-              <div className="device-item" key={d.type}>
-                <div className="device-pct" style={{ color: COLORS[i] }}>{d.percentage}%</div>
-                <div className="device-type">{d.type}</div>
+            <div className="kpi-gauge-card">
+              <GaugeChart value={voiceKPI.dropRate} max={5} label="Drop Rate %" size={130} color="#f9a825" />
+              <div className="gauge-subs">
+                <span>2G % <b>{voiceKPI.dropRate2G}</b></span>
+                <span>3G % <b>{voiceKPI.dropRate3G}</b></span>
               </div>
-            ))}
-          </div>
-        </div>
-        <div className="card">
-          <h3 className="section-title"><Users size={18} /> Daily Active Users</h3>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={userBehavior.dailyActiveUsers}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#2a2e45" />
-              <XAxis dataKey="day" stroke="#9aa0b4" fontSize={11} tickLine={false} />
-              <YAxis stroke="#9aa0b4" fontSize={11} tickLine={false} tickFormatter={formatNum} />
-              <Tooltip contentStyle={chartTooltipStyle} formatter={(v) => formatNum(v)} />
-              <Bar dataKey="users" fill="#4c8bf5" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-          <div style={{ display: 'flex', justifyContent: 'space-around', marginTop: 12 }}>
-            <div className="stat-item" style={{ flex: 1, marginRight: 8 }}>
-              <div className="stat-value" style={{ fontSize: 18, color: 'var(--accent-cyan)' }}>{userBehavior.avgDataPerUser} GB</div>
-              <div className="stat-label">Avg Data/User</div>
             </div>
-            <div className="stat-item" style={{ flex: 1 }}>
-              <div className="stat-value" style={{ fontSize: 18, color: 'var(--accent-purple)' }}>{userBehavior.avgSessionDuration} min</div>
-              <div className="stat-label">Avg Session</div>
+            <div className="kpi-gauge-card">
+              <GaugeChart value={voiceKPI.callSetupAvDuration} max={15} label="Call Setup Av Duration (Sec)" size={130} color="#f9a825" />
+              <div className="gauge-subs">
+                <span>2G (Sec) <b>{voiceKPI.callSetupAvDuration2G}</b></span>
+                <span>3G (Sec) <b>{voiceKPI.callSetupAvDuration3G}</b></span>
+              </div>
+            </div>
+            <div className="kpi-gauge-card">
+              <GaugeChart value={voiceKPI.smsMTSR} label="SMS MT SR %" size={130} color="#c0ca33" />
             </div>
           </div>
-        </div>
-      </div>
+        </section>
+
+        {/* Voice Traffic Trend */}
+        <section className="section-block">
+          <div className="card">
+            <div className="card-title">Total Voice Traffic (hours)</div>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={voiceTrafficTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis dataKey="period" fontSize={9} tick={{ fill: '#888' }} tickLine={false} interval={15} />
+                <YAxis fontSize={9} tick={{ fill: '#888' }} tickLine={false} tickFormatter={v => `${(v/1e6).toFixed(0)}M`} />
+                <Tooltip contentStyle={{ fontSize: 11 }} formatter={v => v.toLocaleString()} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area type="monotone" dataKey="legacyVoice" name="Legacy Voice (h)" stroke="#e4002b" fill="#f5b0b0" fillOpacity={0.6} />
+                <Area type="monotone" dataKey="ottVoice" name="OTT Voice (h)" stroke="#ccc" fill="#e8e8e8" fillOpacity={0.4} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+
+        {/* Data KPI */}
+        <section className="section-block">
+          <h2 className="section-heading">Data KPI</h2>
+          <div className="kpi-gauges-row">
+            <div className="kpi-gauge-card">
+              <GaugeChart value={dataKPI.internetAccessibility} label="Internet Accessibility(%)" size={130} color="#c75028" />
+            </div>
+            <div className="kpi-gauge-card">
+              <GaugeChart value={dataKPI.latency} max={500} label="Latency (ms)" size={130} color="#7bad5e" />
+              <div className="gauge-subs">
+                <span style={{ color: '#2e7d32' }}>Intern <b>{dataKPI.latencyIntern}</b></span>
+                <span style={{ color: '#2e7d32' }}>Extern <b>{dataKPI.latencyExtern}</b></span>
+              </div>
+            </div>
+            <div className="kpi-gauge-card">
+              <GaugeChart value={dataKPI.packetLoss} max={5} label="Packet Loss (%)" size={130} color="#00857c" />
+              <div className="gauge-subs">
+                <span style={{ color: '#2e7d32' }}>Downlink <b>{dataKPI.packetLossDL}</b></span>
+                <span style={{ color: '#2e7d32' }}>Uplink <b>{dataKPI.packetLossUL}</b></span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Traffic Volume */}
+        <section className="section-block">
+          <div className="card">
+            <div className="card-title">Traffic Volume (TByte)</div>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={trafficVolumeTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
+                <XAxis dataKey="period" fontSize={9} tick={{ fill: '#888' }} tickLine={false} interval={15} />
+                <YAxis fontSize={9} tick={{ fill: '#888' }} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}K`} />
+                <Tooltip contentStyle={{ fontSize: 11 }} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Area type="monotone" dataKey="3G" stroke="#999" fill="#ddd" fillOpacity={0.4} stackId="1" />
+                <Area type="monotone" dataKey="4G" stroke="#e4002b" fill="#f5b0b0" fillOpacity={0.6} stackId="1" />
+                <Area type="monotone" dataKey="5G" stroke="#1565c0" fill="#90caf9" fillOpacity={0.5} stackId="1" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
