@@ -1,13 +1,12 @@
+import { useState } from 'react';
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Legend, PieChart, Pie, Cell,
 } from 'recharts';
 import GaugeChart from './components/GaugeChart';
 import DonutChart from './components/DonutChart';
-import {
-  reportMeta, subscriberOverview, dataTraffic, voiceKPI, volteKPI,
-  smsKPI, dataQuality, topApps, gaming, devices, fiveG, roaming, geographic,
-} from './data/networkData';
+import DataUploader from './components/DataUploader';
+import { useData } from './context/DataContext';
 import './App.css';
 
 const fmt = (n) => {
@@ -21,8 +20,15 @@ const tt = { fontSize: 11, borderRadius: 6 };
 const COLORS = ['#4caf50', '#7b1fa2', '#1e88e5', '#fb8c00', '#e53935', '#00897b', '#999'];
 
 function App() {
+  const { data } = useData();
+  const { reportMeta, subscriberOverview, dataTraffic, voiceKPI, volteKPI,
+    smsKPI, dataQuality, topApps, gaming, devices, fiveG, roaming, geographic } = data;
+  const [showUploader, setShowUploader] = useState(false);
+
   return (
     <div className="report">
+      {showUploader && <DataUploader onClose={() => setShowUploader(false)} />}
+
       {/* HEADER */}
       <header className="report-header">
         <div className="header-left">
@@ -33,7 +39,11 @@ function App() {
             <div className="header-subtitle">{reportMeta.date}</div>
           </div>
         </div>
-        <div className="header-right">{reportMeta.department}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button className="btn-upload" onClick={() => setShowUploader(true)}>Import CSV Data</button>
+          <button className="btn-upload" onClick={() => window.print()}>Export PDF</button>
+          <div className="header-right">{reportMeta.department}</div>
+        </div>
       </header>
 
       {/* TOP STATS BAR */}
