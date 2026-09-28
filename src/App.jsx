@@ -50,29 +50,29 @@ function App() {
       <div className="stats-bar">
         <div className="stat-card">
           <div className="stat-value">{fmt(subscriberOverview.totalActive)}</div>
-          <div className="stat-label">Total Active Subscribers</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-value blue">{fmt(subscriberOverview.dataSubscribers)}</div>
-          <div className="stat-label">Data Subscribers</div>
+          <div className="stat-label">Total Subscribers</div>
         </div>
         <div className="stat-card">
           <div className="stat-value">{fmt(subscriberOverview.voiceSubscribers)}</div>
+          <div className="stat-unit">CS Attach</div>
           <div className="stat-label">Voice Subscribers</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value blue">{fmt(subscriberOverview.dataSubscribers)}</div>
+          <div className="stat-unit">PS Attach</div>
+          <div className="stat-label">Data Subscribers</div>
         </div>
         <div className="stat-card">
           <div className="stat-value purple">{fmt(subscriberOverview.volteSubscribers)}</div>
           <div className="stat-label">VoLTE Subscribers</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value orange">{(dataTraffic.totalTB / 1000).toFixed(1)}K</div>
-          <div className="stat-unit">TB</div>
-          <div className="stat-label">Total Data Traffic</div>
+          <div className="stat-value orange">{subscriberOverview.csActive ? fmt(subscriberOverview.csActive) : fmt(dataTraffic.totalTB)}</div>
+          <div className="stat-label">{subscriberOverview.csActive ? 'CS Active' : 'Total Traffic TB'}</div>
         </div>
         <div className="stat-card">
-          <div className="stat-value">{fmt(voiceKPI.totalVoiceHours)}</div>
-          <div className="stat-unit">Hours</div>
-          <div className="stat-label">Voice Traffic</div>
+          <div className="stat-value">{subscriberOverview.psActive ? fmt(subscriberOverview.psActive) : fmt(voiceKPI.totalVoiceHours)}</div>
+          <div className="stat-label">{subscriberOverview.psActive ? 'PS Active' : 'Voice Hours'}</div>
         </div>
       </div>
 
@@ -81,34 +81,56 @@ function App() {
         <div className="section-title">1. Subscriber Overview</div>
         <div className="section-grid cols-3">
           <div className="card">
-            <div className="card-title">Subscribers by RAT</div>
-            <DonutChart data={subscriberOverview.byRAT.map(r => ({ name: r.rat, value: r.pct, color: COLORS[['2G','3G','4G','5G'].indexOf(r.rat)] || '#999' }))} />
+            <div className="card-title">PS Subscribers by RAT</div>
+            <DonutChart data={subscriberOverview.byRAT.map(r => ({ name: r.rat, value: r.pct, color: { '2G': '#999', '3G': '#f9a825', '4G': '#4caf50', '5G': '#7b1fa2' }[r.rat] || '#999' }))} />
+            <table className="data-table" style={{ marginTop: 8 }}>
+              <thead><tr><th>RAT</th><th className="num">Count</th><th className="num">%</th></tr></thead>
+              <tbody>
+                {subscriberOverview.byRAT.map(r => (
+                  <tr key={r.rat}><td>{r.rat}</td><td className="num">{fmt(r.count)}</td><td className="num">{r.pct}%</td></tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           <div className="card">
             <div className="card-title">Service Distribution</div>
             <DonutChart data={subscriberOverview.serviceDistribution.map((s, i) => ({ name: s.type, value: s.pct, color: COLORS[i] }))} />
+            <table className="data-table" style={{ marginTop: 8 }}>
+              <thead><tr><th>Type</th><th className="num">Count</th><th className="num">%</th></tr></thead>
+              <tbody>
+                {subscriberOverview.serviceDistribution.map(s => (
+                  <tr key={s.type}><td>{s.type}</td><td className="num">{fmt(s.count)}</td><td className="num">{s.pct}%</td></tr>
+                ))}
+              </tbody>
+            </table>
           </div>
           <div className="card">
-            <div className="card-title">New Subscribers Trend</div>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={subscriberOverview.newSubscribersTrend} barSize={20}>
+            <div className="card-title">Subscribers Trend (Daily)</div>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={subscriberOverview.newSubscribersTrend} barSize={16}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#eee" />
-                <XAxis dataKey="month" fontSize={10} tickLine={false} />
-                <YAxis fontSize={10} tickLine={false} tickFormatter={v => `${(v/1000).toFixed(0)}K`} />
-                <Tooltip contentStyle={tt} formatter={v => fmt(v)} />
-                <Bar dataKey="value" fill="#4caf50" radius={[4,4,0,0]} />
+                <XAxis dataKey={subscriberOverview.newSubscribersTrend?.[0]?.day ? 'day' : 'month'} fontSize={9} tickLine={false} />
+                <YAxis fontSize={9} tickLine={false} tickFormatter={v => fmt(v)} domain={['dataMin - 100000', 'dataMax + 100000']} />
+                <Tooltip contentStyle={tt} formatter={v => v.toLocaleString()} />
+                {subscriberOverview.newSubscribersTrend?.[0]?.totalActive != null ? (
+                  <Bar dataKey="totalActive" fill="#4caf50" radius={[4,4,0,0]} name="Total Subs" />
+                ) : (
+                  <Bar dataKey="value" fill="#4caf50" radius={[4,4,0,0]} name="New Subs" />
+                )}
               </BarChart>
             </ResponsiveContainer>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8 }}>
-              <div className="mini-stat">
-                <div className="ms-val" style={{ color: '#1e88e5' }}>{fmt(subscriberOverview.roaming.inbound)}</div>
-                <div className="ms-lbl">Roaming Inbound</div>
+            {subscriberOverview.roaming && (subscriberOverview.roaming.inbound > 0 || subscriberOverview.roaming.outbound > 0) && (
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 20, marginTop: 8 }}>
+                <div className="mini-stat">
+                  <div className="ms-val" style={{ color: '#1e88e5' }}>{fmt(subscriberOverview.roaming.inbound)}</div>
+                  <div className="ms-lbl">Roaming Inbound</div>
+                </div>
+                <div className="mini-stat">
+                  <div className="ms-val" style={{ color: '#7b1fa2' }}>{fmt(subscriberOverview.roaming.outbound)}</div>
+                  <div className="ms-lbl">Roaming Outbound</div>
+                </div>
               </div>
-              <div className="mini-stat">
-                <div className="ms-val" style={{ color: '#7b1fa2' }}>{fmt(subscriberOverview.roaming.outbound)}</div>
-                <div className="ms-lbl">Roaming Outbound</div>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

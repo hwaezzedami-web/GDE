@@ -1,11 +1,11 @@
-import { useState, useRef } from 'react';
-import { parseCSV, csvToSectionData, CSV_SECTIONS, generateTemplateCSV } from '../utils/csvParser';
+import { useState } from 'react';
+import { parseCSV, csvToSectionData, CSV_SECTIONS, generateTemplateCSV, detectAndParse } from '../utils/csvParser';
 import { useData } from '../context/DataContext';
 
 const DataUploader = ({ onClose }) => {
   const { updateSection, loadedSections } = useData();
   const [results, setResults] = useState({});
-  const fileRef = useRef();
+  const [autoResult, setAutoResult] = useState(null);
 
   const handleFile = (sectionKey, file) => {
     const reader = new FileReader();
@@ -26,6 +26,29 @@ const DataUploader = ({ onClose }) => {
     reader.readAsText(file);
   };
 
+  const handleAutoDetect = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const rows = parseCSV(e.target.result);
+        const detected = detectAndParse(rows);
+        if (detected) {
+          let count = 0;
+          Object.entries(detected).forEach(([key, val]) => {
+            updateSection(key, val);
+            count++;
+          });
+          setAutoResult({ ok: true, msg: `Auto-detected! Loaded ${count} sections from ${rows.length} rows`, file: file.name });
+        } else {
+          setAutoResult({ ok: false, msg: 'Could not auto-detect format. Use section-specific upload below.' });
+        }
+      } catch (err) {
+        setAutoResult({ ok: false, msg: err.message });
+      }
+    };
+    reader.readAsText(file);
+  };
+
   const downloadTemplate = (key) => {
     const csv = generateTemplateCSV(key);
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -37,21 +60,37 @@ const DataUploader = ({ onClose }) => {
     URL.revokeObjectURL(url);
   };
 
-  const downloadAll = () => {
-    CSV_SECTIONS.forEach(s => downloadTemplate(s.key));
-  };
-
   return (
     <div className="uploader-overlay">
       <div className="uploader-panel">
         <div className="uploader-header">
           <h2>Import CSV Data</h2>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-outline" onClick={downloadAll}>Download All Templates</button>
-            <button className="btn btn-close" onClick={onClose}>Close</button>
-          </div>
+          <button className="btn btn-close" onClick={onClose}>Close</button>
         </div>
-        <p className="uploader-hint">Upload CSV files for each section. Click "Template" to download a sample CSV with the correct headers.</p>
+
+        {/* Auto-detect zone */}
+        <div className="auto-detect-zone">
+          <div className="auto-detect-inner">
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 4 }}>Quick Import (Auto-Detect)</div>
+              <div style={{ fontSize: 11, color: '#777' }}>
+                Drop your <code>kpi_all_days.csv</code> or any pipe/comma/tab-delimited file.
+                The system detects the format and fills all matching sections automatically.
+              </div>
+            </div>
+            <label className="btn btn-primary" style={{ fontSize: 13, padding: '8px 20px' }}>
+              Upload File
+              <input type="file" accept=".csv,.txt" hidden onChange={e => e.target.files[0] && handleAutoDetect(e.target.files[0])} />
+            </label>
+          </div>
+          {autoResult && (
+            <div className={`auto-result ${autoResult.ok ? 'ok' : 'err'}`}>
+              {autoResult.ok ? '✓' : '✗'} {autoResult.msg}
+            </div>
+          )}
+        </div>
+
+        <p className="uploader-hint">Or upload individual CSV files per section:</p>
         <div className="uploader-grid">
           {CSV_SECTIONS.map(s => {
             const r = results[s.key];

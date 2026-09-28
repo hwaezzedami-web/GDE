@@ -339,6 +339,38 @@ body {
   margin-bottom: 16px;
 }
 
+.auto-detect-zone {
+  background: #f1f8e9;
+  border: 2px dashed #81c784;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.auto-detect-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.auto-detect-zone code {
+  background: rgba(0,0,0,0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+.auto-result {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.auto-result.ok { background: #e8f5e9; color: #2e7d32; }
+.auto-result.err { background: #ffebee; color: #e53935; }
+
 .uploader-grid {
   display: flex;
   flex-direction: column;

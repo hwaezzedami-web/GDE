@@ -1,8 +1,11 @@
 export function parseCSV(text) {
-  const lines = text.trim().split('\n').map(l => l.split(',').map(c => c.trim().replace(/^"|"$/g, '')));
+  const clean = text.trim().replace(/\r\n/g, '\n');
+  const firstLine = clean.split('\n')[0];
+  const sep = firstLine.includes('|') ? '|' : firstLine.includes(';') ? ';' : firstLine.includes('\t') ? '\t' : ',';
+  const lines = clean.split('\n').map(l => l.split(sep).map(c => c.trim().replace(/^"|"$/g, '')));
   if (lines.length < 2) return [];
   const headers = lines[0];
-  return lines.slice(1).filter(r => r.length === headers.length).map(row => {
+  return lines.slice(1).filter(r => r.some(c => c !== '') && r.length === headers.length).map(row => {
     const obj = {};
     headers.forEach((h, i) => {
       const v = row[i];
@@ -10,6 +13,88 @@ export function parseCSV(text) {
     });
     return obj;
   });
+}
+
+const SUFFIX_TO_DATE = (suffix) => {
+  const base = new Date('2026-09-28');
+  const today = 20725;
+  const diff = today - suffix;
+  const d = new Date(base);
+  d.setDate(d.getDate() - diff);
+  return d;
+};
+
+const fmtDate = (d) => {
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+};
+
+export function detectAndParse(rows) {
+  if (!rows.length) return null;
+  const cols = Object.keys(rows[0]);
+
+  if (cols.includes('day_suffix') && cols.includes('total_subs_mobilis')) {
+    return parseKpiAllDays(rows);
+  }
+  return null;
+}
+
+function parseKpiAllDays(rows) {
+  const sorted = [...rows].sort((a, b) => (a.day_suffix || 0) - (b.day_suffix || 0));
+  const latest = sorted[sorted.length - 1];
+  const d = latest;
+
+  const totalActive = d.total_subs_mobilis || 0;
+  const csAttach = d.cs_attach || 0;
+  const csActive = d.cs_active || 0;
+  const psAttach = d.ps_attach || 0;
+  const psActive = d.ps_active || 0;
+  const volte = d.volte_subs || 0;
+
+  const ps2g = d.ps_2g_only || 0;
+  const ps3g = d.ps_3g_only || 0;
+  const ps4g = d.ps_4g_only || 0;
+  const cs2g = d.cs_2g_only || 0;
+  const cs3g = d.cs_3g_only || 0;
+
+  const psTotal = ps2g + ps3g + ps4g;
+
+  const result = {
+    subscribers_overview: {
+      totalActive,
+      dataSubscribers: psAttach,
+      voiceSubscribers: csAttach,
+      volteSubscribers: volte,
+      csActive,
+      psActive,
+      roaming: { inbound: 0, outbound: 0 },
+    },
+    subscribers_by_rat: [
+      { rat: '2G', count: ps2g, pct: psTotal ? Math.round(ps2g / psTotal * 1000) / 10 : 0 },
+      { rat: '3G', count: ps3g, pct: psTotal ? Math.round(ps3g / psTotal * 1000) / 10 : 0 },
+      { rat: '4G', count: ps4g, pct: psTotal ? Math.round(ps4g / psTotal * 1000) / 10 : 0 },
+    ],
+    subscribers_service_dist: [
+      { type: 'Voice + Data', count: Math.min(csAttach, psAttach), pct: 0 },
+      { type: 'Voice Only', count: Math.max(0, csAttach - psAttach), pct: 0 },
+      { type: 'Data Only', count: Math.max(0, psAttach - csAttach), pct: 0 },
+    ],
+    subscribers_trend: sorted.map(r => ({
+      day: fmtDate(SUFFIX_TO_DATE(r.day_suffix)),
+      suffix: r.day_suffix,
+      totalActive: r.total_subs_mobilis || 0,
+      psAttach: r.ps_attach || 0,
+      csAttach: r.cs_attach || 0,
+    })),
+  };
+
+  const distTotal = result.subscribers_service_dist.reduce((s, x) => s + x.count, 0);
+  result.subscribers_service_dist.forEach(s => {
+    s.pct = distTotal ? Math.round(s.count / distTotal * 1000) / 10 : 0;
+  });
+
+  return result;
 }
 
 export function csvToSectionData(sectionKey, rows) {
