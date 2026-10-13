@@ -514,6 +514,9 @@ class App(tk.Tk):
         self.network_tab = NetworkTroubleshootTab(notebook, self.conn)
         notebook.add(self.network_tab, text=" Network Troubleshoot ")
 
+        self.ss8_tab = SS8TroubleshootTab(notebook)
+        notebook.add(self.ss8_tab, text=" SS8 Troubleshoot ")
+
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def on_close(self):
@@ -1727,6 +1730,933 @@ class CommsDialog(tk.Toplevel):
         if self.callback:
             self.callback()
         self.destroy()
+
+
+# ─── SS8 Troubleshoot ───────────────────────────────────────────────────
+
+SS8_ISSUES = {
+    "Platform & Services": [
+        {
+            "title": "SS8 Platform Service Won't Start",
+            "symptoms": "systemctl start ss8-platform fails, service exits immediately or stays in 'activating' state",
+            "causes": [
+                "Configuration file syntax error",
+                "Database connection failure",
+                "Port already in use by another process",
+                "Missing or expired license file",
+                "Java heap space / memory issue",
+                "File permission problem on logs or data directory",
+                "Corrupted JAR or missing dependency",
+            ],
+            "diagnosis": """# Check service status and recent logs
+systemctl status ss8-platform -l
+journalctl -u ss8-platform --since '10 min ago' --no-pager
+
+# Check if port is already taken
+ss -tlnp | grep <ss8_port>
+
+# Validate config file
+cat /etc/ss8/platform.conf
+# Look for: typos, wrong DB host/port, missing required fields
+
+# Check Java process
+ps aux | grep java | grep ss8
+
+# Check disk space (full disk = can't write logs = crash)
+df -h
+
+# Check permissions
+ls -la /var/log/ss8/
+ls -la /opt/ss8/
+ls -la /etc/ss8/
+
+# Check license
+ls -la /etc/ss8/license*
+# If expired, contact SS8 for renewal
+
+# Try starting manually to see full error
+/opt/ss8/bin/platform-start.sh  # or equivalent""",
+            "resolution": """1. Config error → fix syntax in /etc/ss8/platform.conf, restart
+2. DB connection → verify DB is running, test with psql, check credentials
+3. Port conflict → kill the other process or change SS8 port
+4. License expired → replace license file, restart
+5. Memory → increase -Xmx in JVM options: /etc/ss8/jvm.conf or platform.conf
+6. Permissions → chown -R ss8:ss8 /var/log/ss8 /opt/ss8/data
+7. Corrupted install → rpm -V ss8-platform, reinstall if needed""",
+        },
+        {
+            "title": "SS8 Service Running But Unresponsive",
+            "symptoms": "Service shows 'active (running)' but web console unreachable, API returns timeout, no data processing",
+            "causes": [
+                "Java thread deadlock",
+                "Out of memory (OOM) but process not killed yet",
+                "Database connection pool exhausted",
+                "Stuck in GC (Garbage Collection) loop",
+                "Internal queue full causing backpressure",
+            ],
+            "diagnosis": """# Check process is actually alive
+ps aux | grep ss8 | grep -v grep
+
+# Check memory usage
+ps -o pid,rss,vsz,cmd -p $(pgrep -f ss8-platform)
+free -h
+
+# Check for OOM killer
+dmesg | grep -i 'oom\\|out of memory\\|killed process'
+journalctl -k | grep -i oom
+
+# Thread dump (CRITICAL for deadlock detection)
+jstack $(pgrep -f ss8-platform) > /tmp/ss8_thread_dump_$(date +%Y%m%d_%H%M%S).txt
+# Take 3 dumps 10 seconds apart to see thread progression
+for i in 1 2 3; do
+  jstack $(pgrep -f ss8-platform) > /tmp/ss8_tdump_${i}.txt
+  sleep 10
+done
+
+# GC activity
+jstat -gc $(pgrep -f ss8-platform) 1000 10
+
+# Check database connections from SS8
+ss -tnp | grep $(pgrep -f ss8-platform) | grep <db_port> | wc -l
+
+# Check internal queues (if exposed via JMX or API)
+curl -s http://localhost:<mgmt_port>/health 2>/dev/null || echo "Management port unreachable"
+
+# Check open file descriptors
+ls /proc/$(pgrep -f ss8-platform)/fd | wc -l
+cat /proc/$(pgrep -f ss8-platform)/limits | grep 'Max open files'""",
+            "resolution": """1. Deadlock → restart service, collect thread dumps for R&D
+2. OOM → increase heap: edit -Xmx in JVM config, restart
+3. DB pool exhausted → restart service, check for connection leaks, increase pool size
+4. GC loop → increase heap or tune GC params, restart
+5. Queue full → restart, check downstream consumers, investigate why processing stalled
+ALWAYS: collect thread dump + heap dump before restart for R&D analysis""",
+        },
+        {
+            "title": "High CPU Usage by SS8 Process",
+            "symptoms": "SS8 Java process consuming 90%+ CPU, system sluggish, processing delayed",
+            "causes": [
+                "Infinite loop in processing logic (bug)",
+                "GC thrashing due to insufficient heap",
+                "Bulk reprocessing / catch-up after downtime",
+                "Regex or query running against large dataset",
+                "Log rotation not working, writing huge log files",
+            ],
+            "diagnosis": """# Identify the hot threads
+top -H -p $(pgrep -f ss8-platform)
+# Note the top thread TIDs (PID column in thread view)
+
+# Convert TID to hex for thread dump matching
+printf '0x%x\\n' <TID>
+
+# Thread dump — find what the hot thread is doing
+jstack $(pgrep -f ss8-platform) | grep -A 30 'nid=0x<hex_tid>'
+
+# Check GC overhead
+jstat -gcutil $(pgrep -f ss8-platform) 1000 10
+# If GC time > 90%, it's GC thrashing
+
+# Check log file sizes
+ls -lh /var/log/ss8/
+du -sh /var/log/ss8/
+
+# Check if catch-up processing
+# Look for burst of old-timestamp messages in logs
+grep 'processing.*202[0-9]' /var/log/ss8/platform.log | tail -5""",
+            "resolution": """1. GC thrashing → increase -Xmx, restart
+2. Catch-up processing → wait (normal after outage), monitor progress
+3. Bug/infinite loop → collect thread dump, restart, escalate to R&D
+4. Log files huge → force logrotate -f /etc/logrotate.d/ss8, configure rotation
+5. If recurring → escalate with thread dumps to R&D for code fix""",
+        },
+    ],
+    "Data Pipeline & Delivery": [
+        {
+            "title": "No Data Flowing Through Pipeline",
+            "symptoms": "No new records in delivery log, empty queues, operators report missing data",
+            "causes": [
+                "Network node disconnected",
+                "Ingestion service stopped",
+                "Message broker down or queue deleted",
+                "Database full / tablespace exhausted",
+                "Configuration change broke data path",
+                "Certificate expired on incoming connection",
+            ],
+            "diagnosis": """# Check ingestion service
+systemctl status ss8-ingestion  # or equivalent service name
+journalctl -u ss8-ingestion --since '30 min ago'
+
+# Check network connections from nodes
+ss -tnp | grep <ingestion_port>
+# Should see ESTABLISHED connections from each node
+
+# Check message broker
+systemctl status rabbitmq-server  # or kafka, activemq
+# Check queue depths
+rabbitmqctl list_queues name messages consumers 2>/dev/null
+
+# Check last record timestamps
+psql -c "SELECT MAX(timestamp) FROM delivery_log;"
+psql -c "SELECT MAX(timestamp) FROM ingestion_log;"
+
+# Check disk space on DB
+df -h /var/lib/pgsql/
+psql -c "SELECT pg_size_pretty(pg_database_size(current_database()));"
+
+# Check certificates
+openssl s_client -connect localhost:<ingestion_port> </dev/null 2>/dev/null | openssl x509 -enddate -noout
+
+# Check data flow with tcpdump
+tcpdump -i <iface> port <ingestion_port> -c 20 -nn
+# Should see packets arriving""",
+            "resolution": """1. Node disconnected → check node side: network, service, credentials
+2. Ingestion service down → restart, check logs for crash cause
+3. Broker issue → restart broker, recreate queues if needed
+4. DB full → archive old data, extend tablespace, add disk
+5. Config change → revert to last known good config, restart
+6. Cert expired → renew certificate, restart ingestion service
+IMPORTANT: Calculate data gap window for the operator""",
+        },
+        {
+            "title": "Data Delivery Failures",
+            "symptoms": "Records ingested but not delivered, delivery_log shows FAILED status, error codes in logs",
+            "causes": [
+                "Delivery destination unreachable",
+                "Authentication failure with destination",
+                "Data format/schema mismatch",
+                "Delivery queue consumer crashed",
+                "Rate limiting or throttling by destination",
+                "TLS/certificate issue with delivery endpoint",
+            ],
+            "diagnosis": """# Check delivery error codes
+psql -c "SELECT error_code, COUNT(*) FROM delivery_log
+WHERE status='FAILED' AND timestamp > NOW() - INTERVAL '1 HOUR'
+GROUP BY error_code ORDER BY COUNT(*) DESC;"
+
+# Check delivery service logs
+grep -i 'delivery.*error\\|failed.*deliver\\|connection.*refused' /var/log/ss8/delivery.log | tail -20
+
+# Test connectivity to delivery destination
+nc -zv <delivery_host> <delivery_port>
+curl -kv https://<delivery_host>:<delivery_port>/
+
+# Check delivery consumer is running
+ps aux | grep delivery
+ss -tnp | grep <delivery_port>
+
+# Check if specific targets failing
+psql -c "SELECT target_id, error_code, COUNT(*)
+FROM delivery_log WHERE status='FAILED'
+AND timestamp > NOW() - INTERVAL '1 HOUR'
+GROUP BY target_id, error_code;"
+
+# Check delivery queue backlog
+rabbitmqctl list_queues name messages consumers | grep delivery""",
+            "resolution": """1. Destination unreachable → check network, firewall, destination service status
+2. Auth failure → verify credentials, renew tokens/certificates
+3. Schema mismatch → check version compatibility, update format config
+4. Consumer crashed → restart delivery service
+5. Rate limited → implement backoff, coordinate with destination admin
+6. TLS issue → update CA bundle, renew client cert
+After fix: requeue failed deliveries for retry""",
+        },
+        {
+            "title": "Data Gaps / Missing Records",
+            "symptoms": "Operators report incomplete data for time window, record counts don't match expected",
+            "causes": [
+                "Brief network interruption during collection",
+                "Service restart caused gap",
+                "Clock drift between nodes and platform",
+                "Filtering rule misconfigured (dropping valid data)",
+                "Database transaction rollback lost records",
+                "Disk full caused silent data loss",
+            ],
+            "diagnosis": """# Identify the gap window
+psql -c "SELECT date_trunc('minute', timestamp) AS minute, COUNT(*)
+FROM ingestion_log
+WHERE timestamp BETWEEN '<start>' AND '<end>'
+GROUP BY minute ORDER BY minute;"
+
+# Compare ingestion vs delivery counts
+psql -c "SELECT
+  (SELECT COUNT(*) FROM ingestion_log WHERE timestamp BETWEEN '<start>' AND '<end>') AS ingested,
+  (SELECT COUNT(*) FROM delivery_log WHERE timestamp BETWEEN '<start>' AND '<end>') AS delivered;"
+
+# Check for service restarts during gap
+journalctl --since '<start>' --until '<end>' | grep -i 'start\\|stop\\|restart\\|crash'
+
+# Check NTP sync
+chronyc sources
+chronyc tracking
+# Compare with node times
+
+# Check for filtering rules
+grep -i 'filter\\|drop\\|exclude' /etc/ss8/platform.conf
+
+# Check disk space history (if sar available)
+sar -d -s <start_time> -e <end_time>
+
+# Check for transaction errors during gap
+grep 'rollback\\|deadlock\\|constraint' /var/log/ss8/platform.log | grep '<gap_timeframe>'""",
+            "resolution": """1. Network interruption → data may be recoverable from node buffers if within retention
+2. Service restart gap → check if platform has replay/catch-up capability
+3. Clock drift → fix NTP, recalculate actual gap window with corrected timestamps
+4. Filter misconfigured → fix config, reprocess if source data available
+5. DB rollback → investigate cause, replay from message queue if available
+6. Disk full → free space, check if write-ahead log can replay
+ALWAYS: document exact gap window and affected targets for operator RCA""",
+        },
+    ],
+    "Database Issues": [
+        {
+            "title": "Database Connection Failures",
+            "symptoms": "SS8 logs show 'connection refused' or 'too many connections', application errors",
+            "causes": [
+                "PostgreSQL service stopped",
+                "Max connections reached",
+                "pg_hba.conf rejecting connections",
+                "Connection pool leak in application",
+                "Network issue between app and DB server",
+                "Disk full preventing DB operations",
+            ],
+            "diagnosis": """# Check PostgreSQL is running
+systemctl status postgresql
+pg_isready -h localhost -p 5432
+
+# Check current connections vs max
+psql -c "SELECT count(*) AS current,
+  (SELECT setting FROM pg_settings WHERE name='max_connections') AS max
+FROM pg_stat_activity;"
+
+# Check who's connected
+psql -c "SELECT usename, application_name, client_addr, state, count(*)
+FROM pg_stat_activity GROUP BY usename, application_name, client_addr, state
+ORDER BY count(*) DESC;"
+
+# Check pg_hba.conf for access rules
+cat /var/lib/pgsql/data/pg_hba.conf | grep -v '^#' | grep -v '^$'
+
+# Check disk space
+df -h /var/lib/pgsql/
+
+# Check PostgreSQL logs
+tail -50 /var/lib/pgsql/data/log/postgresql-*.log
+
+# Check for idle connections (potential leak)
+psql -c "SELECT usename, state, count(*),
+  max(now() - state_change) AS max_idle_time
+FROM pg_stat_activity
+WHERE state = 'idle'
+GROUP BY usename, state;"
+
+# Check if WAL is filling up
+du -sh /var/lib/pgsql/data/pg_wal/""",
+            "resolution": """1. Service stopped → start it: systemctl start postgresql, check logs for crash cause
+2. Max connections → kill idle: SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state='idle' AND state_change < NOW() - INTERVAL '30 min';
+   Then increase max_connections in postgresql.conf and restart
+3. pg_hba.conf → add rule for SS8 host, reload: pg_ctl reload
+4. Connection leak → restart SS8 app, escalate to R&D for fix
+5. Disk full → archive old WAL, clean logs, extend partition""",
+        },
+        {
+            "title": "Slow Database Queries",
+            "symptoms": "Platform responses slow, health check timeouts, delivery delays",
+            "causes": [
+                "Missing indexes on frequently queried columns",
+                "Table bloat (needs VACUUM)",
+                "Long-running query blocking others",
+                "Statistics outdated (bad query plans)",
+                "Disk I/O bottleneck",
+                "Large sequential scans on big tables",
+            ],
+            "diagnosis": """# Find currently running slow queries
+psql -c "SELECT pid, now()-query_start AS duration, state, query
+FROM pg_stat_activity
+WHERE state != 'idle' AND now()-query_start > interval '30 seconds'
+ORDER BY duration DESC;"
+
+# Check for locks / blocking
+psql -c "SELECT blocked_locks.pid AS blocked_pid,
+  blocking_locks.pid AS blocking_pid,
+  blocked_activity.query AS blocked_query,
+  blocking_activity.query AS blocking_query
+FROM pg_catalog.pg_locks blocked_locks
+JOIN pg_catalog.pg_stat_activity blocked_activity ON blocked_activity.pid = blocked_locks.pid
+JOIN pg_catalog.pg_locks blocking_locks ON blocking_locks.locktype = blocked_locks.locktype
+  AND blocking_locks.relation = blocked_locks.relation AND blocking_locks.pid != blocked_locks.pid
+JOIN pg_catalog.pg_stat_activity blocking_activity ON blocking_activity.pid = blocking_locks.pid
+WHERE NOT blocked_locks.granted;"
+
+# Check table bloat
+psql -c "SELECT schemaname, relname, n_dead_tup, n_live_tup,
+  round(n_dead_tup::numeric/greatest(n_live_tup,1)*100,1) AS dead_pct,
+  last_vacuum, last_autovacuum
+FROM pg_stat_user_tables
+WHERE n_dead_tup > 10000
+ORDER BY n_dead_tup DESC LIMIT 10;"
+
+# Check index usage
+psql -c "SELECT relname, seq_scan, idx_scan,
+  round(100.0*idx_scan/(seq_scan+idx_scan),1) AS idx_pct
+FROM pg_stat_user_tables
+WHERE seq_scan + idx_scan > 100
+ORDER BY seq_scan DESC LIMIT 10;"
+
+# Explain a slow query
+psql -c "EXPLAIN (ANALYZE, BUFFERS) <your_slow_query>;"
+
+# Check I/O
+iostat -xz 1 5""",
+            "resolution": """1. Missing index → CREATE INDEX CONCURRENTLY idx_name ON table(column);
+2. Bloat → VACUUM ANALYZE table_name;
+3. Blocking query → pg_terminate_backend(<blocking_pid>); after confirmation
+4. Stale stats → ANALYZE table_name; or ANALYZE;
+5. Disk I/O → check for competing workloads, consider faster storage
+6. Seq scans → add appropriate indexes, check query WHERE clauses""",
+        },
+        {
+            "title": "Database Replication Lag",
+            "symptoms": "Standby reports stale data, replication slot growing, WAL accumulating on primary",
+            "causes": [
+                "Network latency between primary and standby",
+                "Standby under heavy read load",
+                "WAL sender/receiver process crashed",
+                "Disk I/O bottleneck on standby",
+                "Large transaction on primary",
+                "Replication slot inactive (blocks WAL cleanup)",
+            ],
+            "diagnosis": """# On PRIMARY — check replication status
+psql -c "SELECT client_addr, state,
+  pg_wal_lsn_diff(sent_lsn, replay_lsn) AS replay_lag_bytes,
+  pg_size_pretty(pg_wal_lsn_diff(sent_lsn, replay_lsn)) AS replay_lag_pretty,
+  replay_lag
+FROM pg_stat_replication;"
+
+# Check replication slots
+psql -c "SELECT slot_name, active,
+  pg_size_pretty(pg_wal_lsn_diff(pg_current_wal_lsn(), restart_lsn)) AS retained_wal
+FROM pg_replication_slots;"
+
+# Check WAL directory size
+du -sh /var/lib/pgsql/data/pg_wal/
+
+# On STANDBY — check recovery status
+psql -c "SELECT pg_is_in_recovery(), pg_last_wal_receive_lsn(),
+  pg_last_wal_replay_lsn(), pg_last_xact_replay_timestamp();"
+
+# Check standby WAL receiver
+psql -c "SELECT * FROM pg_stat_wal_receiver;"
+
+# Check network between primary and standby
+ping -c 10 <primary_ip>
+iperf3 -c <primary_ip> -t 10  # if available
+
+# Check standby I/O
+iostat -xz 1 5""",
+            "resolution": """1. Network latency → check link, consider compression: wal_compression=on
+2. Standby read load → offload reads, add read replica
+3. WAL process crashed → restart standby: pg_ctl -D /var/lib/pgsql/data promote (emergency only)
+   Normal: restart PostgreSQL on standby
+4. Disk I/O → faster storage on standby, check for competing workloads
+5. Large transaction → wait for completion, monitor progress
+6. Inactive slot → DROP if no longer needed: SELECT pg_drop_replication_slot('slot_name');
+   WARNING: dropping active slot breaks replication""",
+        },
+    ],
+    "Lawful Intercept (LI) Specific": [
+        {
+            "title": "LI Session Provisioning Failure",
+            "symptoms": "New intercept session fails to activate, provisioning error in logs, target not being collected",
+            "causes": [
+                "Invalid target identifier format",
+                "Network node rejected provisioning request",
+                "Mediation function not connected to node",
+                "Duplicate session (already exists for target)",
+                "Authorization/warrant validation failed",
+                "Node interface version mismatch",
+            ],
+            "diagnosis": """# Check provisioning logs
+grep -i 'provision\\|activate\\|session.*fail' /var/log/ss8/mediation.log | tail -30
+
+# Check target identifier format
+# MSISDN: international format +213XXXXXXXXX
+# IMSI: 15 digits, starts with MCC (603 for Algeria)
+# IMEI: 15 digits
+
+# Check connection to network node
+ss -tnp | grep <node_ip>
+# Should show ESTABLISHED connection
+
+# Check if session already exists
+psql -c "SELECT * FROM li_sessions WHERE target_id LIKE '%<identifier>%' AND status='ACTIVE';"
+
+# Check mediation function status
+curl -s http://localhost:<mgmt_port>/api/nodes | python3 -m json.tool 2>/dev/null
+
+# Check for protocol errors
+grep -i 'handover\\|HI1\\|HI2\\|HI3\\|X1\\|X2\\|X3\\|error' /var/log/ss8/mediation.log | tail -20
+
+# Verify audit log for provisioning attempt
+psql -c "SELECT * FROM audit_log WHERE action='PROVISION' ORDER BY timestamp DESC LIMIT 10;" """,
+            "resolution": """1. Invalid format → correct identifier format per operator standard
+2. Node rejected → check node-side logs, verify interface config
+3. MF disconnected → restart mediation, check network to node
+4. Duplicate → deactivate old session first, then create new
+5. Auth failed → verify warrant ID, check authorization service
+6. Version mismatch → check ETSI/3GPP interface version compatibility""",
+        },
+        {
+            "title": "Location Data Quality Issues",
+            "symptoms": "Location accuracy poor, missing coordinates, stale location data",
+            "causes": [
+                "Cell ID database outdated",
+                "Network node providing cell-level only (no GPS/triangulation)",
+                "Location query timeout to network",
+                "Coordinate conversion error",
+                "Indoor/rural coverage gaps",
+                "Node not supporting location queries",
+            ],
+            "diagnosis": """# Check location data quality metrics
+psql -c "SELECT
+  COUNT(*) AS total,
+  SUM(CASE WHEN latitude IS NULL THEN 1 ELSE 0 END) AS null_coords,
+  AVG(accuracy_meters) AS avg_accuracy,
+  MAX(accuracy_meters) AS max_accuracy,
+  MIN(accuracy_meters) AS min_accuracy
+FROM location_data
+WHERE timestamp > NOW() - INTERVAL '24 HOURS';"
+
+# Check by target
+psql -c "SELECT target_id, COUNT(*),
+  AVG(accuracy_meters) AS avg_acc,
+  SUM(CASE WHEN latitude IS NULL THEN 1 ELSE 0 END) AS nulls
+FROM location_data
+WHERE timestamp > NOW() - INTERVAL '24 HOURS'
+GROUP BY target_id
+ORDER BY avg_acc DESC NULLS FIRST;"
+
+# Check cell ID database freshness
+psql -c "SELECT MAX(updated_at) FROM cell_tower_db;" 2>/dev/null
+
+# Check location query logs
+grep -i 'location\\|LCS\\|positioning' /var/log/ss8/mediation.log | tail -20
+
+# Check for timeouts
+grep -i 'timeout.*location\\|location.*timeout' /var/log/ss8/mediation.log | wc -l
+
+# Compare with expected coverage
+# Mobilis: primarily urban coverage
+# Djezzy: broader coverage
+# Ooredoo: urban focused""",
+            "resolution": """1. Cell DB outdated → request updated cell tower database from operator
+2. Cell-level only → this is a network limitation, document expected accuracy
+3. Timeouts → increase timeout config, check network latency to node
+4. Conversion error → verify coordinate system (WGS84), check conversion logic
+5. Coverage gaps → document as known limitation in area
+6. Node limitation → escalate to operator for location service enablement""",
+        },
+        {
+            "title": "Content Intercept (CC) Issues",
+            "symptoms": "Voice/data content not captured, partial captures, audio quality issues",
+            "causes": [
+                "Content delivery interface (HI3/X3) misconfigured",
+                "Codec mismatch or unsupported codec",
+                "Encryption on content (VoLTE without key)",
+                "Bandwidth insufficient for content delivery",
+                "Storage full for buffered content",
+                "Network element not providing content",
+            ],
+            "diagnosis": """# Check HI3/X3 delivery status
+grep -i 'HI3\\|X3\\|content\\|CC\\|voice\\|media' /var/log/ss8/mediation.log | tail -30
+
+# Check content delivery counts
+psql -c "SELECT target_id, content_type,
+  COUNT(*) AS records,
+  SUM(CASE WHEN status='DELIVERED' THEN 1 ELSE 0 END) AS delivered,
+  SUM(CASE WHEN status='FAILED' THEN 1 ELSE 0 END) AS failed
+FROM content_delivery
+WHERE timestamp > NOW() - INTERVAL '24 HOURS'
+GROUP BY target_id, content_type;"
+
+# Check storage/buffer space
+df -h /opt/ss8/data/content/ 2>/dev/null
+du -sh /opt/ss8/data/content/ 2>/dev/null
+
+# Check for codec issues in logs
+grep -i 'codec\\|AMR\\|EVS\\|PCM\\|transcode' /var/log/ss8/mediation.log | tail -10
+
+# Check bandwidth to delivery destination
+iperf3 -c <delivery_dest> -t 10 2>/dev/null
+
+# Check active CC sessions
+psql -c "SELECT target_id, session_type, status, created_at
+FROM li_sessions
+WHERE session_type='CC' AND status='ACTIVE';" """,
+            "resolution": """1. Interface misconfigured → verify HI3/X3 endpoint config, test connectivity
+2. Codec mismatch → enable transcoding if available, update codec support
+3. Encryption → coordinate with operator for lawful access to encrypted content
+4. Bandwidth → increase link capacity or compress, prioritize traffic
+5. Storage full → archive old content, extend storage, set retention policy
+6. Node not providing → escalate to operator, verify CC capability on node""",
+        },
+    ],
+    "Integration & Network Nodes": [
+        {
+            "title": "Network Node Connection Lost",
+            "symptoms": "No data from specific operator, connection dropped, reconnection failing",
+            "causes": [
+                "Operator network maintenance (planned)",
+                "Firewall change blocking connection",
+                "VPN/leased line down",
+                "Certificate expired on either side",
+                "IP address changed on node",
+                "Protocol version incompatibility after upgrade",
+            ],
+            "diagnosis": """# Check connection status
+ss -tnp | grep <node_ip>
+# No ESTABLISHED = connection is down
+
+# Check if we can reach the node
+ping -c 3 <node_ip>
+nc -zv <node_ip> <node_port>
+traceroute -n <node_ip>
+
+# Check VPN/tunnel if applicable
+ip tunnel show
+ipsec statusall 2>/dev/null
+
+# Check certificates
+openssl s_client -connect <node_ip>:<node_port> </dev/null 2>/dev/null | openssl x509 -enddate -noout
+
+# Check mediation logs for disconnect reason
+grep -i '<node_name>\\|<node_ip>\\|disconnect\\|connection.*lost' /var/log/ss8/mediation.log | tail -30
+
+# Check if IP changed (DNS based connections)
+dig <node_hostname>
+# Compare with configured IP
+
+# Check firewall rules haven't changed
+firewall-cmd --list-all
+iptables -L -n | grep <node_ip>
+
+# Check for recent package updates that might have changed protocols
+rpm -qa --last | head -20""",
+            "resolution": """1. Planned maintenance → wait for operator confirmation of completion
+2. Firewall change → coordinate with operator/network team to restore rules
+3. VPN down → restart VPN service, check credentials, contact carrier
+4. Cert expired → renew and exchange certificates with operator
+5. IP changed → update config with new IP, restart mediation
+6. Protocol mismatch → check release notes, may need config change or downgrade""",
+        },
+        {
+            "title": "Integration Validation Failure",
+            "symptoms": "New installation or upgrade, handshake completes but data test fails",
+            "causes": [
+                "ETSI/3GPP version mismatch between platform and node",
+                "Parameter mapping incorrect",
+                "Test target not configured on network side",
+                "Encoding format mismatch (ASN.1 vs XML)",
+                "Incorrect network element type configured",
+                "Time synchronization issue affecting correlation",
+            ],
+            "diagnosis": """# Check handshake/protocol logs
+grep -i 'handshake\\|version\\|capability\\|negotiate' /var/log/ss8/mediation.log | tail -20
+
+# Capture protocol exchange
+tcpdump -i <iface> host <node_ip> -w /tmp/integration_test_$(date +%Y%m%d).pcap -c 500
+
+# Verify test target provisioned
+psql -c "SELECT * FROM li_sessions WHERE target_id='<test_target>' AND status='ACTIVE';"
+
+# Check configured vs actual protocol version
+grep -i 'version\\|protocol\\|etsi\\|3gpp' /etc/ss8/mediation.conf
+
+# Check encoding
+grep -i 'encoding\\|asn1\\|xml\\|ber\\|der' /etc/ss8/mediation.conf
+
+# Verify NTP sync with node
+chronyc tracking
+# Compare with operator NTP
+
+# Check configured node type
+grep -i 'node.*type\\|element.*type\\|interface.*type' /etc/ss8/mediation.conf""",
+            "resolution": """1. Version mismatch → adjust ETSI/3GPP version in config to match node
+2. Parameter mapping → review and correct field mappings with operator
+3. Test target → ask operator to configure test number on their side
+4. Encoding mismatch → switch encoding format in config (ASN.1 BER/DER or XML)
+5. Wrong node type → correct node type (MSC, SGSN, MME, PCRF, etc.)
+6. Time sync → ensure both sides use same NTP source, check drift""",
+        },
+    ],
+    "Operator-Specific (Algeria)": [
+        {
+            "title": "Mobilis (ATM Mobilis) Common Issues",
+            "symptoms": "Issues specific to Mobilis network integration",
+            "causes": [],
+            "diagnosis": """# Mobilis Network Info
+# MCC-MNC: 603-01
+# Technology: 2G/3G/4G
+# MSISDN format: +213 6XX XXX XXX (mobile)
+
+# Common Mobilis-specific checks:
+
+# 1. Verify Mobilis node connectivity
+ping -c 3 <mobilis_node_ip>
+nc -zv <mobilis_node_ip> <port>
+
+# 2. Check Mobilis interface type
+# Typically: X1/X2/X3 (newer) or HI1/HI2/HI3 (ETSI)
+grep -i 'mobilis' /etc/ss8/mediation.conf
+
+# 3. Validate MSISDN format
+# Must include country code: 213
+# Mobile prefixes: 6XX (new), 5XX (older)
+
+# 4. Check for Mobilis maintenance windows
+# Common: Tuesday nights, national holidays
+
+# 5. Verify VPN to Mobilis NOC
+ip route get <mobilis_gateway>
+
+# 6. Contact points
+# Check local contact list for Mobilis NOC numbers""",
+            "resolution": """Mobilis specifics:
+- Interface changes require coordination with Mobilis IT team in Algiers
+- Maintenance windows: coordinate at least 1 week in advance
+- MSISDN validation: strip leading 0, add 213 country code
+- Location: cell tower DB updates available quarterly from Mobilis
+- Escalation: Mobilis NOC → Mobilis IT Security → SS8 R&D""",
+        },
+        {
+            "title": "Djezzy (Optimum Telecom Algerie) Common Issues",
+            "symptoms": "Issues specific to Djezzy network integration",
+            "causes": [],
+            "diagnosis": """# Djezzy Network Info
+# MCC-MNC: 603-02
+# Technology: 2G/3G/4G
+# Parent: VEON (formerly VimpelCom)
+
+# Common Djezzy-specific checks:
+
+# 1. Verify Djezzy node connectivity
+ping -c 3 <djezzy_node_ip>
+nc -zv <djezzy_node_ip> <port>
+
+# 2. Check Djezzy interface
+grep -i 'djezzy' /etc/ss8/mediation.conf
+
+# 3. MSISDN format
+# Mobile: +213 7XX XXX XXX
+
+# 4. Djezzy uses vendor-specific extensions
+# Check for custom parameters in mediation config
+grep -i 'custom\\|vendor\\|extension' /etc/ss8/mediation.conf
+
+# 5. Djezzy network architecture
+# Multiple MSC/SGSN regions — verify correct node per region
+
+# 6. Check for platform-specific logs
+grep -i 'djezzy\\|603-02' /var/log/ss8/mediation.log | tail -20""",
+            "resolution": """Djezzy specifics:
+- Parent company VEON may impose additional compliance requirements
+- Multi-region architecture: ensure correct node per geographic area
+- MSISDN: 7XX prefix range for mobile
+- VPN credentials managed by Djezzy IT security team
+- Maintenance: coordinate through Djezzy operations center
+- Escalation: Djezzy NOC → Djezzy Security → SS8 R&D""",
+        },
+        {
+            "title": "Ooredoo Algeria Common Issues",
+            "symptoms": "Issues specific to Ooredoo network integration",
+            "causes": [],
+            "diagnosis": """# Ooredoo Network Info
+# MCC-MNC: 603-03
+# Technology: 2G/3G/4G/4G+
+# Parent: Ooredoo Group (Qatar)
+
+# Common Ooredoo-specific checks:
+
+# 1. Verify Ooredoo node connectivity
+ping -c 3 <ooredoo_node_ip>
+nc -zv <ooredoo_node_ip> <port>
+
+# 2. Check Ooredoo interface
+grep -i 'ooredoo\\|nedjma' /etc/ss8/mediation.conf  # formerly Nedjma
+
+# 3. MSISDN format
+# Mobile: +213 5XX XXX XXX (legacy Nedjma)
+# Also: +213 6XX XXX XXX (some ranges)
+
+# 4. Ooredoo 4G/VoLTE considerations
+# VoLTE intercept may require IMS node integration
+grep -i 'ims\\|volte\\|sip' /etc/ss8/mediation.conf
+
+# 5. Check for Ooredoo Group standard interfaces
+# Ooredoo Group may standardize across subsidiaries
+grep -i 'standard\\|group\\|policy' /etc/ss8/mediation.conf
+
+# 6. Check for 4G+ specific issues
+grep -i 'carrier.aggregation\\|CA\\|LTE-A' /var/log/ss8/mediation.log | tail -10""",
+            "resolution": """Ooredoo specifics:
+- Formerly Nedjma — some configs may still reference old name
+- Ooredoo Group may standardize platform versions across countries
+- VoLTE/IMS: requires specific SS8 module for SIP-based intercept
+- MSISDN: primarily 5XX range, some 6XX
+- 4G+: carrier aggregation may affect per-bearer intercept
+- Escalation: Ooredoo NOC → Ooredoo Security → SS8 R&D""",
+        },
+    ],
+}
+
+
+class SS8TroubleshootTab(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.build_ui()
+
+    def build_ui(self):
+        paned = ttk.PanedWindow(self, orient="horizontal")
+        paned.pack(fill="both", expand=True, padx=5, pady=5)
+
+        left = ttk.Frame(paned)
+        paned.add(left, weight=1)
+
+        ttk.Label(left, text="SS8 Issues", font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=5)
+
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", lambda *a: self.do_search())
+        sf = ttk.Frame(left)
+        sf.pack(fill="x", pady=(0, 5))
+        ttk.Label(sf, text="Search:").pack(side="left")
+        ttk.Entry(sf, textvariable=self.search_var, width=20).pack(side="left", padx=5, fill="x", expand=True)
+
+        self.tree = ttk.Treeview(left, show="tree", selectmode="browse")
+        self.tree.pack(fill="both", expand=True)
+        self.tree.bind("<<TreeviewSelect>>", self.on_select)
+
+        self.issue_map = {}
+        for category, issues in SS8_ISSUES.items():
+            cat_id = self.tree.insert("", "end", text=f"  {category}", open=True)
+            for issue in issues:
+                iid = self.tree.insert(cat_id, "end", text=f"  {issue['title']}")
+                self.issue_map[iid] = issue
+
+        right = ttk.Frame(paned)
+        paned.add(right, weight=3)
+
+        self.issue_title = ttk.Label(right, text="Select an issue", font=("Segoe UI", 14, "bold"))
+        self.issue_title.pack(anchor="w", padx=10, pady=(10, 0))
+
+        self.content_notebook = ttk.Notebook(right)
+        self.content_notebook.pack(fill="both", expand=True, padx=5, pady=5)
+
+        self.symptoms_text = self._make_text_tab("Symptoms & Causes")
+        self.diagnosis_text = self._make_text_tab("Diagnosis Commands")
+        self.resolution_text = self._make_text_tab("Resolution Steps")
+
+        btn_frame = ttk.Frame(right)
+        btn_frame.pack(fill="x", padx=10, pady=5)
+        ttk.Button(btn_frame, text="Copy Diagnosis Commands", command=self.copy_diag, style="Accent.TButton").pack(side="left", padx=3)
+        ttk.Button(btn_frame, text="Export Issue", command=self.export_issue).pack(side="left", padx=3)
+
+    def _make_text_tab(self, title):
+        frame = ttk.Frame(self.content_notebook)
+        self.content_notebook.add(frame, text=f" {title} ")
+        txt = scrolledtext.ScrolledText(frame, bg="#313244", fg="#cdd6f4", insertbackground="#cdd6f4",
+                                         font=("Consolas", 10), wrap="word")
+        txt.pack(fill="both", expand=True, padx=5, pady=5)
+        txt.tag_configure("heading", foreground="#89b4fa", font=("Consolas", 11, "bold"))
+        txt.tag_configure("cmd", foreground="#a6e3a1")
+        txt.tag_configure("warn", foreground="#fab387", font=("Consolas", 10, "bold"))
+        txt.tag_configure("bullet", foreground="#f5c2e7")
+        return txt
+
+    def on_select(self, event):
+        sel = self.tree.selection()
+        if not sel or sel[0] not in self.issue_map:
+            return
+        issue = self.issue_map[sel[0]]
+        self.issue_title.config(text=issue["title"])
+
+        self.symptoms_text.config(state="normal")
+        self.symptoms_text.delete("1.0", "end")
+        self.symptoms_text.insert("end", "SYMPTOMS\n", "heading")
+        self.symptoms_text.insert("end", f"{issue['symptoms']}\n\n")
+        if issue["causes"]:
+            self.symptoms_text.insert("end", "POSSIBLE CAUSES\n", "heading")
+            for i, cause in enumerate(issue["causes"], 1):
+                self.symptoms_text.insert("end", f"  {i}. {cause}\n", "bullet")
+
+        self.diagnosis_text.config(state="normal")
+        self.diagnosis_text.delete("1.0", "end")
+        self.diagnosis_text.insert("end", "DIAGNOSIS COMMANDS\n\n", "heading")
+        for line in issue["diagnosis"].split("\n"):
+            stripped = line.strip()
+            if stripped.startswith("#"):
+                self.diagnosis_text.insert("end", f"{line}\n", "warn")
+            elif stripped and not stripped.startswith("#"):
+                self.diagnosis_text.insert("end", f"{line}\n", "cmd")
+            else:
+                self.diagnosis_text.insert("end", f"{line}\n")
+
+        self.resolution_text.config(state="normal")
+        self.resolution_text.delete("1.0", "end")
+        self.resolution_text.insert("end", "RESOLUTION STEPS\n\n", "heading")
+        self.resolution_text.insert("end", issue["resolution"])
+
+    def do_search(self):
+        q = self.search_var.get().lower().strip()
+        for iid in list(self.issue_map.keys()):
+            try:
+                self.tree.delete(iid)
+            except Exception:
+                pass
+        for cat_id in self.tree.get_children():
+            self.tree.delete(cat_id)
+        self.issue_map.clear()
+        for category, issues in SS8_ISSUES.items():
+            matched = []
+            for issue in issues:
+                if not q or q in issue["title"].lower() or q in issue["symptoms"].lower() \
+                        or q in issue["diagnosis"].lower() or any(q in c.lower() for c in issue["causes"]):
+                    matched.append(issue)
+            if matched:
+                cat_id = self.tree.insert("", "end", text=f"  {category}", open=True)
+                for issue in matched:
+                    iid = self.tree.insert(cat_id, "end", text=f"  {issue['title']}")
+                    self.issue_map[iid] = issue
+
+    def copy_diag(self):
+        content = self.diagnosis_text.get("1.0", "end").strip()
+        if content:
+            self.clipboard_clear()
+            self.clipboard_append(content)
+            from tkinter import messagebox
+            messagebox.showinfo("Copied", "Diagnosis commands copied to clipboard")
+
+    def export_issue(self):
+        sel = self.tree.selection()
+        if not sel or sel[0] not in self.issue_map:
+            from tkinter import messagebox
+            messagebox.showinfo("Select", "Select an issue first")
+            return
+        issue = self.issue_map[sel[0]]
+        path = filedialog.asksaveasfilename(defaultextension=".txt",
+                                             initialfile=f"SS8_{issue['title'].replace(' ','_')}.txt")
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"SS8 TROUBLESHOOTING: {issue['title']}\n{'='*60}\n\n")
+            f.write(f"SYMPTOMS:\n{issue['symptoms']}\n\n")
+            if issue["causes"]:
+                f.write("POSSIBLE CAUSES:\n")
+                for i, c in enumerate(issue["causes"], 1):
+                    f.write(f"  {i}. {c}\n")
+                f.write("\n")
+            f.write(f"DIAGNOSIS:\n{issue['diagnosis']}\n\n")
+            f.write(f"RESOLUTION:\n{issue['resolution']}\n")
+        from tkinter import messagebox
+        messagebox.showinfo("Export", f"Exported to {path}")
 
 
 # ─── Network Troubleshoot ───────────────────────────────────────────────
