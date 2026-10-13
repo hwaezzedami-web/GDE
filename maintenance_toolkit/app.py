@@ -111,6 +111,21 @@ def init_db():
         action TEXT,
         details TEXT
     );
+    CREATE TABLE IF NOT EXISTS tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        category TEXT,
+        priority TEXT DEFAULT 'Medium',
+        status TEXT DEFAULT 'To Do',
+        due_date TEXT,
+        assigned_to TEXT,
+        customer TEXT,
+        description TEXT,
+        notes TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        completed_at TEXT
+    );
     """)
     conn.commit()
     seed_data(conn)
@@ -516,6 +531,9 @@ class App(tk.Tk):
 
         self.ss8_tab = SS8TroubleshootTab(notebook)
         notebook.add(self.ss8_tab, text=" SS8 Troubleshoot ")
+
+        self.task_tab = TaskTrackerTab(notebook, self.conn)
+        notebook.add(self.task_tab, text=" Task Tracker ")
 
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
@@ -1730,6 +1748,542 @@ class CommsDialog(tk.Toplevel):
         if self.callback:
             self.callback()
         self.destroy()
+
+
+# ─── Task Tracker ───────────────────────────────────────────────────────
+
+TASK_CATEGORIES = [
+    "Incident Management",
+    "Platform Monitoring",
+    "On-site Intervention",
+    "Data Investigation",
+    "On-Call Rotation",
+    "Documentation",
+    "Customer Communication",
+    "Installation & Config",
+    "Escalation to R&D",
+    "Other",
+]
+
+TASK_STATUSES = ["To Do", "In Progress", "Blocked", "Done", "Cancelled"]
+TASK_PRIORITIES = ["Critical", "High", "Medium", "Low"]
+
+
+class TaskTrackerTab(ttk.Frame):
+    def __init__(self, parent, conn):
+        super().__init__(parent)
+        self.conn = conn
+        self.build_ui()
+        self.refresh_list()
+
+    def build_ui(self):
+        # Toolbar
+        top = ttk.Frame(self)
+        top.pack(fill="x", padx=10, pady=5)
+        ttk.Button(top, text="+ New Task", command=self.new_task, style="Accent.TButton").pack(side="left")
+        ttk.Button(top, text="Generate Report", command=self.generate_report).pack(side="left", padx=5)
+        ttk.Button(top, text="Export CSV", command=self.export_csv).pack(side="left", padx=5)
+
+        ttk.Label(top, text="  Status:").pack(side="left", padx=(15, 0))
+        self.filter_status = tk.StringVar(value="Active")
+        cb1 = ttk.Combobox(top, textvariable=self.filter_status,
+                            values=["All", "Active", "To Do", "In Progress", "Blocked", "Done", "Cancelled"],
+                            width=12, state="readonly")
+        cb1.pack(side="left", padx=3)
+        cb1.bind("<<ComboboxSelected>>", lambda e: self.refresh_list())
+
+        ttk.Label(top, text="Category:").pack(side="left", padx=(10, 0))
+        self.filter_cat = tk.StringVar(value="All")
+        cb2 = ttk.Combobox(top, textvariable=self.filter_cat,
+                            values=["All"] + TASK_CATEGORIES, width=18, state="readonly")
+        cb2.pack(side="left", padx=3)
+        cb2.bind("<<ComboboxSelected>>", lambda e: self.refresh_list())
+
+        ttk.Label(top, text="Priority:").pack(side="left", padx=(10, 0))
+        self.filter_pri = tk.StringVar(value="All")
+        cb3 = ttk.Combobox(top, textvariable=self.filter_pri,
+                            values=["All"] + TASK_PRIORITIES, width=10, state="readonly")
+        cb3.pack(side="left", padx=3)
+        cb3.bind("<<ComboboxSelected>>", lambda e: self.refresh_list())
+
+        # Stats bar
+        stats_frame = ttk.Frame(self)
+        stats_frame.pack(fill="x", padx=10, pady=(0, 5))
+        self.stats_labels = {}
+        for key, label, color in [
+            ("todo", "To Do", "#89b4fa"),
+            ("progress", "In Progress", "#f9e2af"),
+            ("blocked", "Blocked", "#f38ba8"),
+            ("done_today", "Done Today", "#a6e3a1"),
+            ("overdue", "Overdue", "#fab387"),
+            ("total", "Total Active", "#cba6f7"),
+        ]:
+            f = tk.Frame(stats_frame, bg="#313244", padx=12, pady=4)
+            f.pack(side="left", padx=4)
+            tk.Label(f, text=label, bg="#313244", fg="#a6adc8", font=("Segoe UI", 9)).pack(side="left")
+            lbl = tk.Label(f, text="0", bg="#313244", fg=color, font=("Segoe UI", 11, "bold"))
+            lbl.pack(side="left", padx=(6, 0))
+            self.stats_labels[key] = lbl
+
+        # Task table
+        cols = ("id", "priority", "status", "category", "customer", "title", "due_date")
+        self.tree = ttk.Treeview(self, columns=cols, show="headings", selectmode="browse")
+        for c, w in zip(cols, (40, 70, 90, 150, 80, 320, 100)):
+            self.tree.heading(c, text=c.replace("_", " ").title(), command=lambda col=c: self.sort_by(col))
+            self.tree.column(c, width=w)
+        self.tree.pack(fill="both", expand=True, padx=10, pady=5)
+        self.tree.bind("<Double-1>", self.edit_task)
+
+        # Quick action buttons
+        bottom = ttk.Frame(self)
+        bottom.pack(fill="x", padx=10, pady=5)
+        ttk.Button(bottom, text="Mark Done", command=lambda: self.quick_status("Done")).pack(side="left", padx=3)
+        ttk.Button(bottom, text="Start", command=lambda: self.quick_status("In Progress")).pack(side="left", padx=3)
+        ttk.Button(bottom, text="Block", command=lambda: self.quick_status("Blocked")).pack(side="left", padx=3)
+        ttk.Button(bottom, text="Delete", command=self.delete_task).pack(side="left", padx=3)
+
+        self.sort_col = "due_date"
+        self.sort_asc = True
+
+    def refresh_list(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        where = []
+        params = []
+        filt_status = self.filter_status.get()
+        if filt_status == "Active":
+            where.append("status NOT IN ('Done','Cancelled')")
+        elif filt_status != "All":
+            where.append("status=?")
+            params.append(filt_status)
+
+        filt_cat = self.filter_cat.get()
+        if filt_cat != "All":
+            where.append("category=?")
+            params.append(filt_cat)
+
+        filt_pri = self.filter_pri.get()
+        if filt_pri != "All":
+            where.append("priority=?")
+            params.append(filt_pri)
+
+        sql = "SELECT * FROM tasks"
+        if where:
+            sql += " WHERE " + " AND ".join(where)
+
+        pri_order = "CASE priority WHEN 'Critical' THEN 0 WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 WHEN 'Low' THEN 3 END"
+        if self.sort_col == "priority":
+            sql += f" ORDER BY {pri_order}"
+        elif self.sort_col:
+            sql += f" ORDER BY {self.sort_col}"
+        if not self.sort_asc:
+            sql += " DESC"
+
+        rows = self.conn.execute(sql, params).fetchall()
+        today = datetime.now().strftime("%Y-%m-%d")
+        for r in rows:
+            tags = ()
+            if r["status"] == "Blocked":
+                tags = ("blocked",)
+            elif r["due_date"] and r["due_date"] < today and r["status"] not in ("Done", "Cancelled"):
+                tags = ("overdue",)
+            elif r["priority"] == "Critical":
+                tags = ("critical",)
+            self.tree.insert("", "end", iid=r["id"],
+                             values=(r["id"], r["priority"], r["status"], r["category"],
+                                     r["customer"] or "", r["title"],
+                                     r["due_date"] or ""),
+                             tags=tags)
+
+        self.tree.tag_configure("overdue", foreground="#fab387")
+        self.tree.tag_configure("blocked", foreground="#f38ba8")
+        self.tree.tag_configure("critical", foreground="#f5c2e7")
+
+        self._update_stats()
+
+    def _update_stats(self):
+        today = datetime.now().strftime("%Y-%m-%d")
+        todo = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE status='To Do'").fetchone()[0]
+        prog = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE status='In Progress'").fetchone()[0]
+        blocked = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE status='Blocked'").fetchone()[0]
+        done_today = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE status='Done' AND completed_at LIKE ?", (today + "%",)).fetchone()[0]
+        overdue = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE due_date < ? AND status NOT IN ('Done','Cancelled') AND due_date IS NOT NULL AND due_date != ''", (today,)).fetchone()[0]
+        total = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE status NOT IN ('Done','Cancelled')").fetchone()[0]
+        self.stats_labels["todo"].config(text=str(todo))
+        self.stats_labels["progress"].config(text=str(prog))
+        self.stats_labels["blocked"].config(text=str(blocked))
+        self.stats_labels["done_today"].config(text=str(done_today))
+        self.stats_labels["overdue"].config(text=str(overdue))
+        self.stats_labels["total"].config(text=str(total))
+
+    def sort_by(self, col):
+        if self.sort_col == col:
+            self.sort_asc = not self.sort_asc
+        else:
+            self.sort_col = col
+            self.sort_asc = True
+        self.refresh_list()
+
+    def new_task(self):
+        TaskDialog(self, self.conn, callback=self.refresh_list)
+
+    def edit_task(self, event):
+        sel = self.tree.selection()
+        if sel:
+            TaskDialog(self, self.conn, task_id=int(sel[0]), callback=self.refresh_list)
+
+    def quick_status(self, new_status):
+        sel = self.tree.selection()
+        if not sel:
+            return
+        now = datetime.now().isoformat()
+        completed = now if new_status == "Done" else None
+        self.conn.execute("UPDATE tasks SET status=?, updated_at=?, completed_at=COALESCE(?,completed_at) WHERE id=?",
+                          (new_status, now, completed, int(sel[0])))
+        r = self.conn.execute("SELECT title FROM tasks WHERE id=?", (int(sel[0]),)).fetchone()
+        log_activity(self.conn, f"Task {new_status}", r["title"] if r else "")
+        self.conn.commit()
+        self.refresh_list()
+
+    def delete_task(self):
+        sel = self.tree.selection()
+        if not sel:
+            return
+        if messagebox.askyesno("Confirm", "Delete this task?"):
+            self.conn.execute("DELETE FROM tasks WHERE id=?", (int(sel[0]),))
+            self.conn.commit()
+            self.refresh_list()
+
+    def export_csv(self):
+        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV", "*.csv")])
+        if not path:
+            return
+        rows = self.conn.execute("SELECT * FROM tasks ORDER BY id DESC").fetchall()
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow([d[0] for d in self.conn.execute("SELECT * FROM tasks LIMIT 0").description])
+            for r in rows:
+                writer.writerow(list(r))
+        messagebox.showinfo("Export", f"Exported {len(rows)} tasks to {path}")
+
+    def generate_report(self):
+        ReportDialog(self, self.conn)
+
+
+class TaskDialog(tk.Toplevel):
+    def __init__(self, parent, conn, task_id=None, callback=None):
+        super().__init__(parent)
+        self.conn = conn
+        self.task_id = task_id
+        self.callback = callback
+        self.title("Edit Task" if task_id else "New Task")
+        self.geometry("600x580")
+        self.configure(bg="#1e1e2e")
+        self.grab_set()
+
+        main = ttk.Frame(self)
+        main.pack(fill="both", expand=True, padx=15, pady=10)
+
+        fields = [
+            ("Title:", "title", "entry"),
+            ("Category:", "category", "combo", TASK_CATEGORIES),
+            ("Priority:", "priority", "combo", TASK_PRIORITIES),
+            ("Status:", "status", "combo", TASK_STATUSES),
+            ("Customer:", "customer", "combo", ["", "Mobilis", "Djezzy", "Ooredoo", "Internal"]),
+            ("Assigned To:", "assigned_to", "entry"),
+            ("Due Date (YYYY-MM-DD):", "due_date", "entry"),
+        ]
+        self.vars = {}
+        for i, f in enumerate(fields):
+            ttk.Label(main, text=f[0]).grid(row=i, column=0, sticky="w", pady=3)
+            if f[2] == "entry":
+                var = tk.StringVar()
+                ttk.Entry(main, textvariable=var, width=45).grid(row=i, column=1, sticky="ew", padx=5, pady=3)
+            else:
+                default = f[3][2] if len(f[3]) > 2 and not task_id else (f[3][0] if f[3] else "")
+                var = tk.StringVar(value=default if not task_id else "")
+                ttk.Combobox(main, textvariable=var, values=f[3], width=42, state="readonly").grid(row=i, column=1, sticky="ew", padx=5, pady=3)
+            self.vars[f[1]] = var
+
+        if not task_id:
+            self.vars["priority"].set("Medium")
+            self.vars["status"].set("To Do")
+
+        row = len(fields)
+        for label, key in [("Description:", "description"), ("Notes:", "notes")]:
+            ttk.Label(main, text=label).grid(row=row, column=0, sticky="nw", pady=3)
+            txt = scrolledtext.ScrolledText(main, height=5, width=43, bg="#313244", fg="#cdd6f4",
+                                             insertbackground="#cdd6f4", font=("Consolas", 9))
+            txt.grid(row=row, column=1, sticky="ew", padx=5, pady=3)
+            self.vars[key] = txt
+            row += 1
+
+        main.columnconfigure(1, weight=1)
+
+        btn_frame = ttk.Frame(main)
+        btn_frame.grid(row=row, column=0, columnspan=2, pady=10)
+        ttk.Button(btn_frame, text="Save", command=self.save, style="Accent.TButton").pack(side="left", padx=5)
+        ttk.Button(btn_frame, text="Cancel", command=self.destroy).pack(side="left", padx=5)
+
+        if task_id:
+            self.load_task()
+
+    def load_task(self):
+        r = self.conn.execute("SELECT * FROM tasks WHERE id=?", (self.task_id,)).fetchone()
+        if not r:
+            return
+        for key, var in self.vars.items():
+            val = r[key] or ""
+            if isinstance(var, tk.StringVar):
+                var.set(val)
+            else:
+                var.delete("1.0", "end")
+                var.insert("1.0", val)
+
+    def get_val(self, key):
+        v = self.vars[key]
+        return v.get() if isinstance(v, tk.StringVar) else v.get("1.0", "end").strip()
+
+    def save(self):
+        title = self.get_val("title")
+        if not title:
+            messagebox.showwarning("Required", "Title is required")
+            return
+        now = datetime.now().isoformat()
+        data = {k: self.get_val(k) for k in self.vars}
+        completed = now if data["status"] == "Done" else None
+
+        if self.task_id:
+            self.conn.execute("""UPDATE tasks SET title=?,category=?,priority=?,status=?,customer=?,
+                assigned_to=?,due_date=?,description=?,notes=?,updated_at=?,
+                completed_at=CASE WHEN ?='Done' AND completed_at IS NULL THEN ? ELSE completed_at END
+                WHERE id=?""",
+                (data["title"], data["category"], data["priority"], data["status"],
+                 data["customer"], data["assigned_to"], data["due_date"],
+                 data["description"], data["notes"], now, data["status"], now, self.task_id))
+            log_activity(self.conn, "Task Updated", f"[{data['priority']}] {data['title']}")
+        else:
+            self.conn.execute("""INSERT INTO tasks (title,category,priority,status,customer,
+                assigned_to,due_date,description,notes,created_at,updated_at,completed_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (data["title"], data["category"], data["priority"], data["status"],
+                 data["customer"], data["assigned_to"], data["due_date"],
+                 data["description"], data["notes"], now, now, completed))
+            log_activity(self.conn, "Task Created", f"[{data['priority']}] {data['title']}")
+        self.conn.commit()
+        if self.callback:
+            self.callback()
+        self.destroy()
+
+
+class ReportDialog(tk.Toplevel):
+    def __init__(self, parent, conn):
+        super().__init__(parent)
+        self.conn = conn
+        self.title("Generate Task Report")
+        self.geometry("750x700")
+        self.configure(bg="#1e1e2e")
+        self.grab_set()
+
+        main = ttk.Frame(self)
+        main.pack(fill="both", expand=True, padx=15, pady=10)
+
+        # Report type selection
+        top = ttk.Frame(main)
+        top.pack(fill="x", pady=(0, 10))
+        ttk.Label(top, text="Report Type:").pack(side="left")
+        self.report_type = tk.StringVar(value="daily")
+        for val, txt in [("daily", "Daily"), ("weekly", "Weekly"), ("all_active", "All Active"), ("by_category", "By Category"), ("overdue", "Overdue")]:
+            ttk.Radiobutton(top, text=txt, variable=self.report_type, value=val, command=self.generate).pack(side="left", padx=8)
+
+        self.report_text = scrolledtext.ScrolledText(main, bg="#313244", fg="#cdd6f4",
+                                                       insertbackground="#cdd6f4", font=("Consolas", 10), wrap="word")
+        self.report_text.pack(fill="both", expand=True, pady=5)
+        self.report_text.tag_configure("heading", foreground="#89b4fa", font=("Consolas", 11, "bold"))
+        self.report_text.tag_configure("subhead", foreground="#cba6f7", font=("Consolas", 10, "bold"))
+        self.report_text.tag_configure("warn", foreground="#fab387")
+        self.report_text.tag_configure("good", foreground="#a6e3a1")
+        self.report_text.tag_configure("sep", foreground="#45475a")
+
+        btn_frame = ttk.Frame(main)
+        btn_frame.pack(fill="x", pady=5)
+        ttk.Button(btn_frame, text="Copy to Clipboard", command=self.copy_report, style="Accent.TButton").pack(side="left", padx=3)
+        ttk.Button(btn_frame, text="Export to File", command=self.export_report).pack(side="left", padx=3)
+        ttk.Button(btn_frame, text="Close", command=self.destroy).pack(side="left", padx=3)
+
+        self.generate()
+
+    def generate(self):
+        rtype = self.report_type.get()
+        self.report_text.config(state="normal")
+        self.report_text.delete("1.0", "end")
+
+        today = datetime.now()
+        today_str = today.strftime("%Y-%m-%d")
+
+        if rtype == "daily":
+            self._daily_report(today, today_str)
+        elif rtype == "weekly":
+            week_start = (today - timedelta(days=today.weekday())).strftime("%Y-%m-%d")
+            self._weekly_report(today, today_str, week_start)
+        elif rtype == "all_active":
+            self._active_report()
+        elif rtype == "by_category":
+            self._category_report()
+        elif rtype == "overdue":
+            self._overdue_report(today_str)
+
+    def _daily_report(self, today, today_str):
+        self.report_text.insert("end", f"DAILY TASK REPORT — {today.strftime('%A, %B %d, %Y')}\n", "heading")
+        self.report_text.insert("end", "=" * 60 + "\n\n", "sep")
+
+        done = self.conn.execute("SELECT * FROM tasks WHERE status='Done' AND completed_at LIKE ?", (today_str + "%",)).fetchall()
+        self.report_text.insert("end", f"COMPLETED TODAY ({len(done)})\n", "subhead")
+        if done:
+            for t in done:
+                self.report_text.insert("end", f"  [DONE] [{t['priority']}] {t['title']}", "good")
+                if t["customer"]:
+                    self.report_text.insert("end", f" — {t['customer']}")
+                self.report_text.insert("end", "\n")
+        else:
+            self.report_text.insert("end", "  No tasks completed today.\n")
+
+        self.report_text.insert("end", "\n")
+        prog = self.conn.execute("SELECT * FROM tasks WHERE status='In Progress' ORDER BY priority").fetchall()
+        self.report_text.insert("end", f"IN PROGRESS ({len(prog)})\n", "subhead")
+        for t in prog:
+            overdue = ""
+            if t["due_date"] and t["due_date"] < today_str:
+                overdue = " ⚠ OVERDUE"
+            self.report_text.insert("end", f"  [{t['priority']}] {t['title']}")
+            if t["customer"]:
+                self.report_text.insert("end", f" — {t['customer']}")
+            if t["due_date"]:
+                self.report_text.insert("end", f" (due: {t['due_date']})")
+            if overdue:
+                self.report_text.insert("end", overdue, "warn")
+            self.report_text.insert("end", "\n")
+
+        self.report_text.insert("end", "\n")
+        blocked = self.conn.execute("SELECT * FROM tasks WHERE status='Blocked' ORDER BY priority").fetchall()
+        self.report_text.insert("end", f"BLOCKED ({len(blocked)})\n", "subhead")
+        for t in blocked:
+            self.report_text.insert("end", f"  [{t['priority']}] {t['title']}", "warn")
+            if t["notes"]:
+                self.report_text.insert("end", f"\n    Reason: {t['notes'][:100]}")
+            self.report_text.insert("end", "\n")
+
+        self.report_text.insert("end", "\n")
+        todo = self.conn.execute("SELECT * FROM tasks WHERE status='To Do' ORDER BY priority LIMIT 10").fetchall()
+        self.report_text.insert("end", f"TO DO — TOP 10 ({len(todo)} shown)\n", "subhead")
+        for t in todo:
+            self.report_text.insert("end", f"  [{t['priority']}] {t['title']}")
+            if t["due_date"]:
+                self.report_text.insert("end", f" (due: {t['due_date']})")
+            self.report_text.insert("end", "\n")
+
+        self.report_text.insert("end", "\n" + "=" * 60 + "\n", "sep")
+        total = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE status NOT IN ('Done','Cancelled')").fetchone()[0]
+        self.report_text.insert("end", f"Total active tasks: {total}\n")
+
+    def _weekly_report(self, today, today_str, week_start):
+        self.report_text.insert("end", f"WEEKLY TASK REPORT — Week of {week_start}\n", "heading")
+        self.report_text.insert("end", "=" * 60 + "\n\n", "sep")
+
+        done = self.conn.execute("SELECT * FROM tasks WHERE status='Done' AND completed_at >= ? ORDER BY completed_at", (week_start,)).fetchall()
+        self.report_text.insert("end", f"COMPLETED THIS WEEK ({len(done)})\n", "subhead")
+        for t in done:
+            self.report_text.insert("end", f"  [DONE] [{t['category']}] {t['title']}", "good")
+            if t["customer"]:
+                self.report_text.insert("end", f" — {t['customer']}")
+            self.report_text.insert("end", f" (completed: {t['completed_at'][:10]})\n")
+
+        self.report_text.insert("end", "\n")
+        created = self.conn.execute("SELECT * FROM tasks WHERE created_at >= ? ORDER BY created_at", (week_start,)).fetchall()
+        self.report_text.insert("end", f"CREATED THIS WEEK ({len(created)})\n", "subhead")
+        for t in created:
+            self.report_text.insert("end", f"  [{t['status']}] [{t['priority']}] {t['title']}\n")
+
+        self.report_text.insert("end", "\n")
+        self.report_text.insert("end", "SUMMARY BY CATEGORY\n", "subhead")
+        cats = self.conn.execute("""SELECT category,
+            SUM(CASE WHEN status='Done' AND completed_at >= ? THEN 1 ELSE 0 END) AS done,
+            SUM(CASE WHEN status NOT IN ('Done','Cancelled') THEN 1 ELSE 0 END) AS active
+            FROM tasks WHERE category IS NOT NULL GROUP BY category ORDER BY category""", (week_start,)).fetchall()
+        for c in cats:
+            self.report_text.insert("end", f"  {c['category']}: {c['done']} done, {c['active']} active\n")
+
+        self.report_text.insert("end", "\n")
+        carryover = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE status NOT IN ('Done','Cancelled')").fetchone()[0]
+        self.report_text.insert("end", f"\nCarry-over to next week: {carryover} active tasks\n")
+
+    def _active_report(self):
+        self.report_text.insert("end", "ALL ACTIVE TASKS\n", "heading")
+        self.report_text.insert("end", "=" * 60 + "\n\n", "sep")
+        rows = self.conn.execute("""SELECT * FROM tasks WHERE status NOT IN ('Done','Cancelled')
+            ORDER BY CASE priority WHEN 'Critical' THEN 0 WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END, due_date""").fetchall()
+        for t in rows:
+            marker = ">>>" if t["priority"] == "Critical" else "  "
+            tag = "warn" if t["priority"] in ("Critical", "High") else None
+            line = f"{marker} [{t['status']}] [{t['priority']}] {t['title']}"
+            if t["customer"]:
+                line += f" — {t['customer']}"
+            if t["due_date"]:
+                line += f" (due: {t['due_date']})"
+            line += f"\n     Category: {t['category']}\n"
+            self.report_text.insert("end", line, tag)
+        self.report_text.insert("end", f"\nTotal: {len(rows)} active tasks\n")
+
+    def _category_report(self):
+        self.report_text.insert("end", "TASKS BY CATEGORY\n", "heading")
+        self.report_text.insert("end", "=" * 60 + "\n\n", "sep")
+        for cat in TASK_CATEGORIES:
+            rows = self.conn.execute("SELECT * FROM tasks WHERE category=? AND status NOT IN ('Done','Cancelled') ORDER BY priority", (cat,)).fetchall()
+            done_count = self.conn.execute("SELECT COUNT(*) FROM tasks WHERE category=? AND status='Done'", (cat,)).fetchone()[0]
+            self.report_text.insert("end", f"{cat} ({len(rows)} active, {done_count} completed)\n", "subhead")
+            if rows:
+                for t in rows:
+                    self.report_text.insert("end", f"  [{t['status']}] [{t['priority']}] {t['title']}\n")
+            else:
+                self.report_text.insert("end", "  No active tasks.\n")
+            self.report_text.insert("end", "\n")
+
+    def _overdue_report(self, today_str):
+        self.report_text.insert("end", "OVERDUE TASKS\n", "heading")
+        self.report_text.insert("end", "=" * 60 + "\n\n", "sep")
+        rows = self.conn.execute("""SELECT * FROM tasks
+            WHERE due_date < ? AND due_date IS NOT NULL AND due_date != ''
+            AND status NOT IN ('Done','Cancelled')
+            ORDER BY due_date""", (today_str,)).fetchall()
+        if rows:
+            for t in rows:
+                days = (datetime.strptime(today_str, "%Y-%m-%d") - datetime.strptime(t["due_date"], "%Y-%m-%d")).days
+                self.report_text.insert("end", f"  OVERDUE by {days} day(s): ", "warn")
+                self.report_text.insert("end", f"[{t['priority']}] {t['title']}")
+                if t["customer"]:
+                    self.report_text.insert("end", f" — {t['customer']}")
+                self.report_text.insert("end", f"\n    Due: {t['due_date']} | Status: {t['status']} | Category: {t['category']}\n\n")
+        else:
+            self.report_text.insert("end", "  No overdue tasks!\n", "good")
+        self.report_text.insert("end", f"\nTotal overdue: {len(rows)}\n")
+
+    def copy_report(self):
+        content = self.report_text.get("1.0", "end").strip()
+        if content:
+            self.clipboard_clear()
+            self.clipboard_append(content)
+            messagebox.showinfo("Copied", "Report copied to clipboard")
+
+    def export_report(self):
+        path = filedialog.asksaveasfilename(defaultextension=".txt",
+                                             initialfile=f"Task_Report_{datetime.now().strftime('%Y%m%d')}.txt",
+                                             filetypes=[("Text", "*.txt")])
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(self.report_text.get("1.0", "end"))
+        messagebox.showinfo("Export", f"Report exported to {path}")
 
 
 # ─── SS8 Troubleshoot ───────────────────────────────────────────────────
