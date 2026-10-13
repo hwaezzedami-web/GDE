@@ -508,6 +508,9 @@ class App(tk.Tk):
         notebook.add(self.handover_tab, text=" Handover ")
         notebook.add(self.comms_tab, text=" Comms Templates ")
 
+        self.linux_tab = LinuxCheatSheetTab(notebook)
+        notebook.add(self.linux_tab, text=" Linux RHEL ")
+
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def on_close(self):
@@ -1721,6 +1724,368 @@ class CommsDialog(tk.Toplevel):
         if self.callback:
             self.callback()
         self.destroy()
+
+
+# ─── Linux RHEL Cheat Sheet ─────────────────────────────────────────────
+
+LINUX_CHEATSHEET = {
+    "System Info": [
+        ("Hostname & OS version", "hostnamectl"),
+        ("Kernel version", "uname -r"),
+        ("RHEL release", "cat /etc/redhat-release"),
+        ("System uptime", "uptime"),
+        ("CPU info", "lscpu"),
+        ("Memory info", "free -h"),
+        ("Disk usage summary", "df -h"),
+        ("Block devices", "lsblk"),
+        ("PCI devices", "lspci"),
+        ("Hardware summary", "dmidecode --type system"),
+        ("Environment variables", "env"),
+        ("Current date/time", "timediff  # or: date"),
+        ("Timezone", "timedatectl"),
+    ],
+    "User & Permissions": [
+        ("Current user", "whoami"),
+        ("User details", "id <username>"),
+        ("List logged-in users", "w"),
+        ("Switch user", "su - <username>"),
+        ("Run as root", "sudo <command>"),
+        ("Add user", "useradd -m <username>"),
+        ("Set password", "passwd <username>"),
+        ("Add to group", "usermod -aG <group> <username>"),
+        ("List groups", "groups <username>"),
+        ("Change file owner", "chown <user>:<group> <file>"),
+        ("Change permissions", "chmod 755 <file>"),
+        ("Set ACL", "setfacl -m u:<user>:rwx <file>"),
+        ("View ACL", "getfacl <file>"),
+        ("sudoers edit", "visudo"),
+        ("Lock user account", "usermod -L <username>"),
+        ("Unlock user account", "usermod -U <username>"),
+    ],
+    "File Operations": [
+        ("List files (detailed)", "ls -lah"),
+        ("Find file by name", "find / -name '<filename>' 2>/dev/null"),
+        ("Find files modified today", "find /path -mtime 0"),
+        ("Find large files (>100MB)", "find / -size +100M -type f 2>/dev/null"),
+        ("Search file content", "grep -rn '<pattern>' /path/"),
+        ("Search case-insensitive", "grep -rni '<pattern>' /path/"),
+        ("Compare files", "diff <file1> <file2>"),
+        ("Copy with preserve", "cp -a <src> <dst>"),
+        ("Sync directories", "rsync -avz <src> <dst>"),
+        ("Archive & compress", "tar czf archive.tar.gz /path/to/dir"),
+        ("Extract tar.gz", "tar xzf archive.tar.gz"),
+        ("Disk usage of dir", "du -sh /path/to/dir"),
+        ("Disk usage by subdir", "du -h --max-depth=1 /path/ | sort -h"),
+        ("Count files in dir", "find /path -type f | wc -l"),
+        ("Tail follow a log", "tail -f /var/log/messages"),
+        ("Head of file", "head -n 50 <file>"),
+        ("View with paging", "less <file>"),
+    ],
+    "Service Management (systemd)": [
+        ("List all services", "systemctl list-units --type=service"),
+        ("List failed services", "systemctl list-units --type=service --state=failed"),
+        ("Service status", "systemctl status <service>"),
+        ("Start service", "systemctl start <service>"),
+        ("Stop service", "systemctl stop <service>"),
+        ("Restart service", "systemctl restart <service>"),
+        ("Reload config (no restart)", "systemctl reload <service>"),
+        ("Enable on boot", "systemctl enable <service>"),
+        ("Disable on boot", "systemctl disable <service>"),
+        ("Check if enabled", "systemctl is-enabled <service>"),
+        ("View service logs", "journalctl -u <service>"),
+        ("Service logs since boot", "journalctl -u <service> -b"),
+        ("Service logs last hour", "journalctl -u <service> --since '1 hour ago'"),
+        ("Follow service logs", "journalctl -u <service> -f"),
+        ("List timers", "systemctl list-timers"),
+        ("Daemon reload (after unit edit)", "systemctl daemon-reload"),
+        ("Mask service (prevent start)", "systemctl mask <service>"),
+        ("Unmask service", "systemctl unmask <service>"),
+    ],
+    "Process Management": [
+        ("List all processes", "ps aux"),
+        ("Process tree", "pstree -p"),
+        ("Find process by name", "ps aux | grep <name>"),
+        ("Find process by port", "ss -tlnp | grep <port>"),
+        ("Interactive top", "top"),
+        ("Better top (if installed)", "htop"),
+        ("Kill process by PID", "kill <PID>"),
+        ("Force kill", "kill -9 <PID>"),
+        ("Kill by name", "pkill <name>"),
+        ("List open files by process", "lsof -p <PID>"),
+        ("Files opened by user", "lsof -u <username>"),
+        ("Background a command", "<command> &"),
+        ("Bring to foreground", "fg %1"),
+        ("List background jobs", "jobs"),
+        ("Run immune to hangup", "nohup <command> &"),
+        ("Thread count per process", "ps -eLf | grep <name> | wc -l"),
+        ("CPU usage per process", "pidstat -p <PID> 1 5"),
+    ],
+    "Networking": [
+        ("IP addresses", "ip addr show"),
+        ("Routing table", "ip route"),
+        ("DNS resolution", "nslookup <hostname>  # or: dig <hostname>"),
+        ("Test connectivity", "ping -c 4 <host>"),
+        ("Trace route", "traceroute <host>"),
+        ("Listening ports", "ss -tlnp"),
+        ("All connections", "ss -anp"),
+        ("Established connections", "ss -tnp state established"),
+        ("Firewall rules", "firewall-cmd --list-all"),
+        ("Open port in firewall", "firewall-cmd --add-port=<port>/tcp --permanent && firewall-cmd --reload"),
+        ("Close port", "firewall-cmd --remove-port=<port>/tcp --permanent && firewall-cmd --reload"),
+        ("List firewall zones", "firewall-cmd --get-zones"),
+        ("Check specific port open", "firewall-cmd --query-port=<port>/tcp"),
+        ("Curl test endpoint", "curl -v https://<host>:<port>/path"),
+        ("Download file", "wget <url>  # or: curl -O <url>"),
+        ("Network stats", "netstat -s"),
+        ("ARP table", "arp -a  # or: ip neigh"),
+        ("Capture packets", "tcpdump -i <iface> port <port> -w capture.pcap"),
+        ("Read pcap", "tcpdump -r capture.pcap"),
+        ("Bandwidth per process", "iftop  # or: nethogs"),
+    ],
+    "Package Management (yum/dnf)": [
+        ("Update all packages", "yum update -y  # RHEL 7\ndnf update -y  # RHEL 8/9"),
+        ("Install package", "yum install -y <package>"),
+        ("Remove package", "yum remove <package>"),
+        ("Search package", "yum search <keyword>"),
+        ("List installed", "yum list installed"),
+        ("Package info", "yum info <package>"),
+        ("Which package owns file", "yum provides <file>"),
+        ("List repos", "yum repolist"),
+        ("Clean cache", "yum clean all"),
+        ("Install local RPM", "rpm -ivh <package>.rpm"),
+        ("List RPM contents", "rpm -qlp <package>.rpm"),
+        ("Verify installed RPM", "rpm -V <package>"),
+        ("Check RPM dependencies", "rpm -qpR <package>.rpm"),
+        ("History of yum transactions", "yum history"),
+        ("Undo last yum transaction", "yum history undo <id>"),
+    ],
+    "Disk & Filesystem": [
+        ("Disk usage", "df -h"),
+        ("Inode usage", "df -i"),
+        ("Mount a device", "mount /dev/sdX /mnt/point"),
+        ("Unmount", "umount /mnt/point"),
+        ("List mounts", "mount | column -t"),
+        ("Persistent mounts", "cat /etc/fstab"),
+        ("Check filesystem", "fsck /dev/sdX  # unmount first!"),
+        ("Create ext4 filesystem", "mkfs.ext4 /dev/sdX"),
+        ("Create XFS filesystem", "mkfs.xfs /dev/sdX"),
+        ("Resize XFS (grow)", "xfs_growfs /mount/point"),
+        ("LVM: list volumes", "lvs"),
+        ("LVM: list volume groups", "vgs"),
+        ("LVM: list physical volumes", "pvs"),
+        ("LVM: extend logical vol", "lvextend -L +10G /dev/vgname/lvname"),
+        ("LVM: resize filesystem after", "xfs_growfs /mount  # XFS\nresize2fs /dev/vgname/lvname  # ext4"),
+        ("Swap usage", "swapon --show"),
+        ("IO stats", "iostat -xz 1 5"),
+    ],
+    "Logs & Journald": [
+        ("System log (traditional)", "tail -100 /var/log/messages"),
+        ("Auth log", "tail -100 /var/log/secure"),
+        ("Boot log", "journalctl -b"),
+        ("Kernel messages", "dmesg | tail -50"),
+        ("All errors since boot", "journalctl -b -p err"),
+        ("Logs by time range", "journalctl --since '2024-01-15 14:00' --until '2024-01-15 15:00'"),
+        ("Logs last N minutes", "journalctl --since '30 min ago'"),
+        ("Follow all logs", "journalctl -f"),
+        ("Disk used by journal", "journalctl --disk-usage"),
+        ("Vacuum old journals", "journalctl --vacuum-time=7d"),
+        ("Cron logs", "grep CRON /var/log/messages"),
+        ("Boot history", "last reboot"),
+        ("Login history", "last"),
+        ("Failed logins", "lastb"),
+        ("Audit log", "ausearch -m avc -ts recent"),
+    ],
+    "SELinux": [
+        ("Current mode", "getenforce"),
+        ("Set permissive (temp)", "setenforce 0"),
+        ("Set enforcing (temp)", "setenforce 1"),
+        ("Persistent config", "vi /etc/selinux/config  # SELINUX=enforcing|permissive|disabled"),
+        ("File context", "ls -Z <file>"),
+        ("Restore default context", "restorecon -Rv /path"),
+        ("List booleans", "getsebool -a"),
+        ("Set boolean", "setsebool -P <bool> on"),
+        ("Recent denials", "ausearch -m avc -ts recent"),
+        ("Generate policy from denial", "ausearch -m avc -ts recent | audit2allow -M mypolicy"),
+        ("Apply generated policy", "semodule -i mypolicy.pp"),
+        ("Port labels", "semanage port -l | grep <port>"),
+        ("Add port label", "semanage port -a -t <type> -p tcp <port>"),
+    ],
+    "Cron & Scheduling": [
+        ("Edit user crontab", "crontab -e"),
+        ("List user crontab", "crontab -l"),
+        ("System cron jobs", "ls -la /etc/cron.d/ /etc/cron.daily/ /etc/cron.hourly/"),
+        ("Cron syntax", "# MIN HOUR DOM MON DOW command\n# *    *    *   *   *\n# 0    2    *   *   * /script.sh  = daily at 2:00 AM\n# */5  *    *   *   * /script.sh  = every 5 min\n# 0    9    *   *   1-5 /s.sh     = weekdays 9 AM"),
+        ("At (one-time)", "echo '/script.sh' | at now + 30 minutes"),
+        ("List at jobs", "atq"),
+        ("Systemd timer unit", "systemctl list-timers --all"),
+    ],
+    "Performance & Monitoring": [
+        ("CPU usage", "top -bn1 | head -5"),
+        ("Memory usage", "free -h"),
+        ("Virtual memory stats", "vmstat 1 5"),
+        ("IO wait", "iostat -xz 1 5"),
+        ("Per-disk IO", "iotop  # needs iotop package"),
+        ("Network throughput", "sar -n DEV 1 5"),
+        ("CPU history", "sar -u 1 5"),
+        ("Load average", "uptime  # or: cat /proc/loadavg"),
+        ("Open file descriptors", "cat /proc/sys/fs/file-nr"),
+        ("Per-process memory", "ps aux --sort=-%mem | head -20"),
+        ("Per-process CPU", "ps aux --sort=-%cpu | head -20"),
+        ("System activity report", "sar -A"),
+        ("Trace system calls", "strace -p <PID> -c"),
+        ("Java thread dump", "jstack <PID> > /tmp/tdump.txt"),
+        ("Java heap dump", "jmap -dump:format=b,file=/tmp/heap.bin <PID>"),
+    ],
+    "SSH & Remote": [
+        ("SSH to host", "ssh user@host"),
+        ("SSH with key", "ssh -i /path/to/key user@host"),
+        ("SCP file to remote", "scp file.txt user@host:/remote/path/"),
+        ("SCP from remote", "scp user@host:/remote/file.txt ./"),
+        ("SCP directory", "scp -r /local/dir user@host:/remote/"),
+        ("SSH tunnel (local port)", "ssh -L 8080:localhost:8443 user@host"),
+        ("SSH tunnel (remote port)", "ssh -R 9090:localhost:8080 user@host"),
+        ("Generate SSH key", "ssh-keygen -t ed25519 -C 'comment'"),
+        ("Copy key to host", "ssh-copy-id user@host"),
+        ("SSH config file", "vi ~/.ssh/config\n# Host myserver\n#   HostName 10.0.0.1\n#   User admin\n#   IdentityFile ~/.ssh/id_ed25519"),
+        ("Keep alive", "# In ~/.ssh/config:\n# ServerAliveInterval 60\n# ServerAliveCountMax 3"),
+    ],
+    "Certificates & TLS": [
+        ("View cert details", "openssl x509 -in cert.pem -text -noout"),
+        ("Check cert expiry", "openssl x509 -in cert.pem -enddate -noout"),
+        ("Check remote cert", "openssl s_client -connect host:443 </dev/null 2>/dev/null | openssl x509 -text -noout"),
+        ("Remote cert expiry", "echo | openssl s_client -connect host:443 2>/dev/null | openssl x509 -enddate -noout"),
+        ("Generate self-signed", "openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout key.pem -out cert.pem"),
+        ("Generate CSR", "openssl req -new -newkey rsa:2048 -nodes -keyout key.pem -out request.csr"),
+        ("Verify cert matches key", "openssl x509 -noout -modulus -in cert.pem | md5sum\nopenssl rsa -noout -modulus -in key.pem | md5sum"),
+        ("Java keystore: list", "keytool -list -v -keystore keystore.jks"),
+        ("Java keystore: import", "keytool -import -alias myalias -file cert.pem -keystore keystore.jks"),
+        ("System CA bundle (RHEL)", "/etc/pki/tls/certs/ca-bundle.crt"),
+        ("Update CA trust", "update-ca-trust"),
+    ],
+    "NTP & Time": [
+        ("Check time sync", "timedatectl"),
+        ("NTP sources (chrony)", "chronyc sources -v"),
+        ("NTP tracking", "chronyc tracking"),
+        ("Force sync", "chronyc makestep"),
+        ("Set timezone", "timedatectl set-timezone Africa/Algiers"),
+        ("List timezones", "timedatectl list-timezones"),
+        ("Chrony config", "cat /etc/chrony.conf"),
+        ("Restart chrony", "systemctl restart chronyd"),
+    ],
+}
+
+
+class LinuxCheatSheetTab(ttk.Frame):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.build_ui()
+
+    def build_ui(self):
+        paned = ttk.PanedWindow(self, orient="horizontal")
+        paned.pack(fill="both", expand=True, padx=10, pady=5)
+
+        left = ttk.Frame(paned)
+        paned.add(left, weight=1)
+
+        ttk.Label(left, text="Categories", font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=(5, 2))
+        self.cat_listbox = tk.Listbox(left, bg="#313244", fg="#cdd6f4", selectbackground="#585b70",
+                                       font=("Segoe UI", 10), activestyle="none")
+        self.cat_listbox.pack(fill="both", expand=True, pady=5)
+        self.categories = list(LINUX_CHEATSHEET.keys())
+        for cat in self.categories:
+            self.cat_listbox.insert("end", f"  {cat}")
+        self.cat_listbox.bind("<<ListboxSelect>>", self.on_cat_select)
+
+        ttk.Label(left, text="Search:").pack(anchor="w", pady=(10, 0))
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", lambda *a: self.do_search())
+        ttk.Entry(left, textvariable=self.search_var, width=25).pack(fill="x", pady=5)
+
+        right = ttk.Frame(paned)
+        paned.add(right, weight=3)
+
+        self.cat_title = ttk.Label(right, text="Select a category", font=("Segoe UI", 14, "bold"))
+        self.cat_title.pack(anchor="w", padx=5, pady=5)
+
+        self.content_text = scrolledtext.ScrolledText(right, bg="#313244", fg="#cdd6f4",
+                                                        insertbackground="#cdd6f4", font=("Consolas", 11), wrap="word")
+        self.content_text.pack(fill="both", expand=True, padx=5, pady=5)
+        self.content_text.tag_configure("title", foreground="#89b4fa", font=("Consolas", 11, "bold"))
+        self.content_text.tag_configure("cmd", foreground="#a6e3a1", font=("Consolas", 11))
+        self.content_text.tag_configure("sep", foreground="#585b70")
+
+        btn_frame = ttk.Frame(right)
+        btn_frame.pack(fill="x", padx=5, pady=5)
+        ttk.Button(btn_frame, text="Copy Selected Command", command=self.copy_cmd, style="Accent.TButton").pack(side="left", padx=3)
+        ttk.Button(btn_frame, text="Export All to File", command=self.export_all).pack(side="left", padx=3)
+
+        self.cat_listbox.selection_set(0)
+        self.show_category(self.categories[0])
+
+    def on_cat_select(self, event):
+        sel = self.cat_listbox.curselection()
+        if sel:
+            self.show_category(self.categories[sel[0]])
+
+    def show_category(self, cat):
+        self.cat_title.config(text=f"RHEL Linux — {cat}")
+        self.content_text.config(state="normal")
+        self.content_text.delete("1.0", "end")
+        for desc, cmd in LINUX_CHEATSHEET[cat]:
+            self.content_text.insert("end", f"  {desc}\n", "title")
+            for line in cmd.split("\n"):
+                self.content_text.insert("end", f"    $ {line}\n", "cmd")
+            self.content_text.insert("end", "  " + "─" * 60 + "\n", "sep")
+
+    def do_search(self):
+        q = self.search_var.get().lower().strip()
+        if not q:
+            sel = self.cat_listbox.curselection()
+            if sel:
+                self.show_category(self.categories[sel[0]])
+            return
+        self.cat_title.config(text=f"Search: '{q}'")
+        self.content_text.config(state="normal")
+        self.content_text.delete("1.0", "end")
+        found = False
+        for cat, commands in LINUX_CHEATSHEET.items():
+            for desc, cmd in commands:
+                if q in desc.lower() or q in cmd.lower():
+                    found = True
+                    self.content_text.insert("end", f"  [{cat}] {desc}\n", "title")
+                    for line in cmd.split("\n"):
+                        self.content_text.insert("end", f"    $ {line}\n", "cmd")
+                    self.content_text.insert("end", "  " + "─" * 60 + "\n", "sep")
+        if not found:
+            self.content_text.insert("end", "  No commands found matching your search.")
+
+    def copy_cmd(self):
+        try:
+            sel = self.content_text.get("sel.first", "sel.last").strip()
+            if sel:
+                sel = sel.lstrip("$ ").strip()
+                self.clipboard_clear()
+                self.clipboard_append(sel)
+                messagebox.showinfo("Copied", "Command copied to clipboard")
+        except tk.TclError:
+            messagebox.showinfo("Select", "Highlight a command first, then click Copy")
+
+    def export_all(self):
+        path = filedialog.asksaveasfilename(defaultextension=".txt", initialfile="RHEL_Linux_CheatSheet.txt",
+                                             filetypes=[("Text", "*.txt")])
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("RED HAT ENTERPRISE LINUX — COMMAND CHEAT SHEET\n")
+            f.write("=" * 60 + "\n\n")
+            for cat, commands in LINUX_CHEATSHEET.items():
+                f.write(f"\n{'─'*60}\n  {cat.upper()}\n{'─'*60}\n\n")
+                for desc, cmd in commands:
+                    f.write(f"  {desc}\n")
+                    for line in cmd.split("\n"):
+                        f.write(f"    $ {line}\n")
+                    f.write("\n")
+        messagebox.showinfo("Export", f"Cheat sheet exported to {path}")
 
 
 if __name__ == "__main__":
