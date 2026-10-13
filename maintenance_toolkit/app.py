@@ -511,6 +511,9 @@ class App(tk.Tk):
         self.linux_tab = LinuxCheatSheetTab(notebook)
         notebook.add(self.linux_tab, text=" Linux RHEL ")
 
+        self.network_tab = NetworkTroubleshootTab(notebook, self.conn)
+        notebook.add(self.network_tab, text=" Network Troubleshoot ")
+
         self.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def on_close(self):
@@ -1724,6 +1727,447 @@ class CommsDialog(tk.Toplevel):
         if self.callback:
             self.callback()
         self.destroy()
+
+
+# ─── Network Troubleshoot ───────────────────────────────────────────────
+
+NETWORK_FLOWCHARTS = {
+    "No Connectivity to Remote Host": {
+        "description": "Host unreachable — systematic layer-by-layer diagnosis",
+        "steps": [
+            ("1. Check local interface is UP", "ip link show\nip addr show", "If interface is DOWN → ip link set <iface> up"),
+            ("2. Check IP address assigned", "ip addr show <iface>", "No IP → check DHCP: dhclient <iface> or verify /etc/sysconfig/network-scripts/ifcfg-<iface>"),
+            ("3. Ping default gateway", "ip route show default\nping -c 3 <gateway_ip>", "Fails → cable/switch issue, wrong VLAN, or gateway down"),
+            ("4. Ping remote host by IP", "ping -c 3 <remote_ip>", "Fails → check routing: ip route get <remote_ip>, traceroute <remote_ip>"),
+            ("5. Check DNS resolution", "nslookup <hostname>\ndig <hostname>", "Fails → check /etc/resolv.conf, try ping 8.8.8.8 to rule out DNS vs network"),
+            ("6. Check firewall blocking", "firewall-cmd --list-all\niptables -L -n", "Port blocked → firewall-cmd --add-port=<port>/tcp --permanent && firewall-cmd --reload"),
+            ("7. Check remote port open", "ss -tlnp | grep <port>  # on remote\nnc -zv <host> <port>  # from local\ncurl -v telnet://<host>:<port>", "Port closed → service not running or firewall on remote side"),
+            ("8. Check SELinux", "getenforce\nausearch -m avc -ts recent", "Denied → setsebool or semanage port to allow"),
+        ],
+    },
+    "Service Not Responding on Port": {
+        "description": "Service is running but clients can't connect",
+        "steps": [
+            ("1. Verify service is running", "systemctl status <service>\nps aux | grep <service>", "Not running → systemctl start <service>, check logs: journalctl -u <service>"),
+            ("2. Check service is listening", "ss -tlnp | grep <port>", "Not listening → check service config for bind address/port, restart service"),
+            ("3. Check bind address", "ss -tlnp | grep <port>\n# 0.0.0.0 = all interfaces\n# 127.0.0.1 = localhost only", "Bound to 127.0.0.1 → change config to bind 0.0.0.0 or specific IP"),
+            ("4. Test locally first", "curl -v localhost:<port>\nnc -zv 127.0.0.1 <port>", "Works locally → network/firewall issue. Fails → service config problem"),
+            ("5. Check local firewall", "firewall-cmd --list-ports\nfirewall-cmd --list-services", "Port not listed → firewall-cmd --add-port=<port>/tcp --permanent"),
+            ("6. Check from client side", "nc -zv <server_ip> <port>\ncurl -v <server_ip>:<port>", "Timeout → intermediate firewall. Refused → service/local firewall"),
+            ("7. Packet capture", "tcpdump -i <iface> port <port> -nn", "SYN but no SYN-ACK → service not accepting. No packets → blocked upstream"),
+            ("8. Check connection limits", "ss -s\ncat /proc/sys/net/core/somaxconn\nulimit -n", "Too many connections → increase limits or investigate connection leak"),
+        ],
+    },
+    "DNS Resolution Failure": {
+        "description": "Cannot resolve hostnames to IP addresses",
+        "steps": [
+            ("1. Check current DNS config", "cat /etc/resolv.conf", "Empty or wrong nameserver → fix resolv.conf or DHCP config"),
+            ("2. Test DNS directly", "dig @<dns_server> <hostname>\nnslookup <hostname> <dns_server>", "Specific server fails → try another DNS server"),
+            ("3. Test with public DNS", "dig @8.8.8.8 <hostname>", "Works → local DNS server issue. Fails → hostname doesn't exist or network issue"),
+            ("4. Check /etc/hosts", "cat /etc/hosts\ngetent hosts <hostname>", "Can add manual entry as workaround: echo '<ip> <hostname>' >> /etc/hosts"),
+            ("5. Check nsswitch order", "cat /etc/nsswitch.conf | grep hosts", "Should be: hosts: files dns — files = /etc/hosts first, then DNS"),
+            ("6. Check if DNS port reachable", "nc -zvu <dns_server> 53\ndig @<dns_server> +tcp <hostname>", "Port 53 blocked → firewall between you and DNS"),
+            ("7. Flush DNS cache (if using nscd)", "nscd -i hosts\nsystemctl restart nscd", "Stale cache can serve old/wrong records"),
+            ("8. Check for split DNS / VPN", "ip route show\nresolvectl status", "VPN may override DNS. Check if connected to expected network"),
+        ],
+    },
+    "High Latency / Slow Network": {
+        "description": "Network is connected but slow — identify the bottleneck",
+        "steps": [
+            ("1. Measure baseline latency", "ping -c 20 <host>\n# Check avg/max/mdev", "Normal LAN: <1ms, WAN: 10-100ms, Satellite: 500ms+"),
+            ("2. Trace the path", "traceroute -n <host>\nmtr <host>  # real-time", "High latency at specific hop → problem at that router/link"),
+            ("3. Check for packet loss", "ping -c 100 <host>\nmtr -r -c 100 <host>", ">1% loss → congestion, bad cable, failing NIC, or overloaded switch"),
+            ("4. Check local NIC errors", "ip -s link show <iface>\nethtool <iface>", "RX/TX errors, drops → bad cable, duplex mismatch, driver issue"),
+            ("5. Check NIC speed/duplex", "ethtool <iface> | grep -i speed\nethtool <iface> | grep -i duplex", "100Mbps instead of 1000 → auto-negotiation issue or bad cable"),
+            ("6. Check bandwidth usage", "iftop -i <iface>\nnethogs\nsar -n DEV 1 5", "Saturated link → identify top talkers, implement QoS"),
+            ("7. Check TCP retransmissions", "ss -ti\nnetstat -s | grep -i retrans", "High retransmits → lossy link, MTU issue, or congestion"),
+            ("8. Check MTU / fragmentation", "ping -M do -s 1472 <host>  # test 1500 MTU\nip link show <iface> | grep mtu", "Fragmentation needed → reduce MTU: ip link set <iface> mtu 1400"),
+            ("9. Check system load", "top -bn1 | head -5\nvmstat 1 5\niostat -xz 1 3", "High CPU/IO → network slowness may be symptom, not cause"),
+        ],
+    },
+    "Intermittent Connection Drops": {
+        "description": "Connection works then drops — find the pattern",
+        "steps": [
+            ("1. Continuous ping test", "ping <host> | while read line; do echo \"$(date '+%H:%M:%S') $line\"; done | tee ping_test.log", "Captures timestamps of drops to correlate with events"),
+            ("2. Check interface flapping", "dmesg | grep -i 'link\\ \\|eth\\|eno\\|ens'\njournalctl -u NetworkManager --since '1 hour ago'", "Link up/down messages → bad cable, NIC, or switch port"),
+            ("3. Check cable / physical", "ethtool <iface> | grep 'Link detected'\nip -s link show <iface>", "Errors incrementing → replace cable, try different switch port"),
+            ("4. Check ARP issues", "ip neigh show\narping -I <iface> <gateway>", "Incomplete/failed entries → IP conflict or switch issue"),
+            ("5. Check for duplex mismatch", "ethtool <iface>", "Half duplex → force full: ethtool -s <iface> speed 1000 duplex full"),
+            ("6. Monitor over time", "sar -n DEV 1 3600 > /tmp/net_monitor.log &\n# or:\nwatch -n 5 'ip -s link show <iface>'", "Log pattern: drops at same time daily? Under load? Random?"),
+            ("7. Check kernel ring buffer", "dmesg -T | grep -i 'error\\|drop\\|reset\\|timeout'", "Driver errors → update driver, check firmware"),
+            ("8. Check bonding / teaming", "cat /proc/net/bonding/bond0  # if bonded\nteamctl <team> state", "Slave interface failing → check individual links"),
+        ],
+    },
+    "SS8 Data Pipeline Network Issues": {
+        "description": "SS8 mediation/delivery network connectivity problems",
+        "steps": [
+            ("1. Check SS8 services", "systemctl status ss8-*\nps aux | grep ss8", "Service down → restart, check logs: journalctl -u ss8-platform"),
+            ("2. Verify mediation connectivity", "nc -zv <mediation_server> <port>\ncurl -kv https://<mediation_server>:<port>/health", "Can't connect → firewall, service down, or network route issue"),
+            ("3. Check network node connections", "ss -tnp | grep ss8\nnetstat -anp | grep <ss8_port>", "No ESTABLISHED connections → nodes not connecting or creds expired"),
+            ("4. Test each operator link", "ping -c 3 <mobilis_node>\nping -c 3 <djezzy_node>\nping -c 3 <ooredoo_node>", "Specific operator down → check their network / VPN / leased line"),
+            ("5. Check VPN/tunnel status", "ip tunnel show\nipsec status  # if using IPsec\nwg show  # if WireGuard", "Tunnel down → restart VPN service, check certs/keys"),
+            ("6. Verify data flow", "tcpdump -i <iface> host <node_ip> -c 50 -nn\ntcpdump -i <iface> port <data_port> -c 50", "No traffic → source not sending. One-way → ACK issue or asymmetric route"),
+            ("7. Check message queue backlog", "# Check queue management console or:\ncurl -s http://localhost:<mq_port>/api/queues | python3 -m json.tool", "Growing backlog → consumer down or slow processing"),
+            ("8. Check SSL/TLS handshake", "openssl s_client -connect <node>:<port>\n# Check cert validity, cipher, protocol version", "Handshake failure → cert expired, protocol mismatch, wrong CA"),
+            ("9. Check routing for return path", "ip route get <node_ip>\ntraceroute <node_ip>", "Asymmetric routing → packets go out one path, return another (may be blocked)"),
+            ("10. Verify NTP sync", "chronyc sources\nchronyc tracking", "Time drift > 1s → data timestamping issues, auth token expiry"),
+        ],
+    },
+    "Firewall Troubleshooting (firewalld)": {
+        "description": "Firewall blocking traffic — diagnose and fix",
+        "steps": [
+            ("1. Check if firewalld is running", "systemctl status firewalld\nfirewall-cmd --state", "Not running → systemctl start firewalld"),
+            ("2. Current zone & rules", "firewall-cmd --get-active-zones\nfirewall-cmd --list-all", "Shows which zone the interface is in and what's allowed"),
+            ("3. Check specific port", "firewall-cmd --query-port=<port>/tcp", "no → port is blocked by firewall"),
+            ("4. Open a port", "firewall-cmd --add-port=<port>/tcp --permanent\nfirewall-cmd --reload", "Don't forget --permanent or it's lost on reload/reboot"),
+            ("5. Open a service", "firewall-cmd --add-service=https --permanent\nfirewall-cmd --reload", "Services: http, https, ssh, dns, ntp, postgresql, etc."),
+            ("6. Allow specific source IP", "firewall-cmd --add-rich-rule='rule family=ipv4 source address=<ip>/32 port port=<port> protocol=tcp accept' --permanent\nfirewall-cmd --reload", "More secure than opening port to everyone"),
+            ("7. Check iptables (if not firewalld)", "iptables -L -n -v\niptables -L -n -v -t nat", "Look for DROP/REJECT rules matching your traffic"),
+            ("8. Temporary test: disable firewall", "systemctl stop firewalld\n# TEST connectivity\nsystemctl start firewalld", "If it works without firewall → firewall rule issue. Re-enable immediately!"),
+            ("9. Log dropped packets", "firewall-cmd --set-log-denied=all\n# Check: journalctl -f | grep REJECT\n# Disable after: firewall-cmd --set-log-denied=off", "See exactly what's being dropped and why"),
+        ],
+    },
+    "TCP Connection Debugging": {
+        "description": "Deep TCP-level troubleshooting with tcpdump and ss",
+        "steps": [
+            ("1. Capture specific traffic", "tcpdump -i <iface> host <ip> -w /tmp/capture.pcap\ntcpdump -i <iface> port <port> -nn -c 100", "Save to pcap for analysis, -nn avoids DNS lookups"),
+            ("2. Filter TCP flags", "tcpdump -i <iface> 'tcp[tcpflags] & tcp-syn != 0' -nn\ntcpdump -i <iface> 'tcp[tcpflags] & tcp-rst != 0' -nn", "SYN without SYN-ACK → port closed or filtered. RSTs → connection rejected"),
+            ("3. Check connection states", "ss -tan state time-wait | wc -l\nss -tan state close-wait | wc -l\nss -tan state established | wc -l", "Many TIME_WAIT → short-lived connections (normal). Many CLOSE_WAIT → app not closing sockets"),
+            ("4. Check socket buffer sizes", "sysctl net.core.rmem_max\nsysctl net.core.wmem_max\nsysctl net.ipv4.tcp_rmem\nsysctl net.ipv4.tcp_wmem", "Increase for high-throughput: sysctl -w net.core.rmem_max=16777216"),
+            ("5. Check TCP keepalive", "sysctl net.ipv4.tcp_keepalive_time\nsysctl net.ipv4.tcp_keepalive_intvl\nsysctl net.ipv4.tcp_keepalive_probes", "Default 7200s (2hr) — too long for some setups. Lower to detect dead connections faster"),
+            ("6. Check for SYN flood / backlog", "netstat -s | grep -i syn\nss -tnl | head  # check Send-Q vs Recv-Q", "Send-Q full → backlog too small. SYN cookies active → under attack or misconfigured"),
+            ("7. Analyze with tshark (CLI Wireshark)", "tshark -r /tmp/capture.pcap -Y 'tcp.analysis.retransmission'\ntshark -r /tmp/capture.pcap -qz io,stat,1", "Retransmissions indicate loss. IO stats show throughput over time"),
+        ],
+    },
+}
+
+NETWORK_TOOLS_REF = {
+    "ping": {
+        "purpose": "Test basic connectivity and measure round-trip time",
+        "examples": [
+            ("Basic ping", "ping -c 4 <host>"),
+            ("Flood ping (root)", "ping -f -c 1000 <host>"),
+            ("Set packet size", "ping -s 1472 -M do <host>"),
+            ("Set interval", "ping -i 0.5 <host>"),
+            ("Ping with timestamp", "ping <host> | while read l; do echo \"$(date '+%T') $l\"; done"),
+        ],
+    },
+    "traceroute / mtr": {
+        "purpose": "Trace network path and identify where latency/loss occurs",
+        "examples": [
+            ("Basic traceroute", "traceroute <host>"),
+            ("TCP traceroute (bypass ICMP blocks)", "traceroute -T -p 443 <host>"),
+            ("MTR (real-time)", "mtr <host>"),
+            ("MTR report (100 packets)", "mtr -r -c 100 <host>"),
+        ],
+    },
+    "ss / netstat": {
+        "purpose": "Show socket statistics, connections, and listening ports",
+        "examples": [
+            ("Listening TCP ports", "ss -tlnp"),
+            ("All TCP connections", "ss -tanp"),
+            ("Connections to specific port", "ss -tnp dport = :<port>"),
+            ("Connection count by state", "ss -tan | awk '{print $1}' | sort | uniq -c | sort -rn"),
+            ("Socket memory usage", "ss -tm"),
+            ("UDP sockets", "ss -ulnp"),
+        ],
+    },
+    "tcpdump": {
+        "purpose": "Capture and analyze network packets",
+        "examples": [
+            ("Capture on interface", "tcpdump -i <iface> -nn -c 100"),
+            ("Filter by host", "tcpdump -i <iface> host <ip> -nn"),
+            ("Filter by port", "tcpdump -i <iface> port <port> -nn"),
+            ("Save to file", "tcpdump -i <iface> -w /tmp/capture.pcap"),
+            ("Read pcap", "tcpdump -r /tmp/capture.pcap -nn"),
+            ("Show packet contents", "tcpdump -i <iface> -A -s0 port <port>"),
+            ("SYN packets only", "tcpdump -i <iface> 'tcp[tcpflags] & tcp-syn != 0' -nn"),
+            ("Complex filter", "tcpdump -i <iface> '(host <ip1> or host <ip2>) and port <port>'"),
+        ],
+    },
+    "curl": {
+        "purpose": "Test HTTP/HTTPS endpoints and measure response",
+        "examples": [
+            ("Basic GET", "curl -v https://<host>:<port>/path"),
+            ("Show headers only", "curl -I https://<host>/path"),
+            ("With timing", "curl -o /dev/null -s -w 'DNS: %{time_namelookup}s\\nConnect: %{time_connect}s\\nTLS: %{time_appconnect}s\\nTotal: %{time_total}s\\n' https://<host>/path"),
+            ("POST JSON", "curl -X POST -H 'Content-Type: application/json' -d '{\"key\":\"val\"}' https://<host>/api"),
+            ("Ignore cert errors", "curl -k https://<host>:<port>/path"),
+            ("Through proxy", "curl -x http://<proxy>:<port> https://<host>/path"),
+        ],
+    },
+    "nc (netcat)": {
+        "purpose": "Test TCP/UDP port connectivity",
+        "examples": [
+            ("Test TCP port", "nc -zv <host> <port>"),
+            ("Test port range", "nc -zv <host> 8000-8100"),
+            ("Test UDP port", "nc -zuv <host> <port>"),
+            ("Simple chat/debug", "nc -l <port>  # server\nnc <host> <port>  # client"),
+            ("Transfer file", "nc -l <port> > received.txt  # receiver\nnc <host> <port> < file.txt  # sender"),
+        ],
+    },
+    "ip": {
+        "purpose": "Network interface and routing configuration",
+        "examples": [
+            ("Show all interfaces", "ip addr show"),
+            ("Show routing table", "ip route show"),
+            ("Show specific route", "ip route get <dest_ip>"),
+            ("Add static route", "ip route add <network>/<mask> via <gateway>"),
+            ("Delete route", "ip route del <network>/<mask>"),
+            ("Show ARP/neighbor", "ip neigh show"),
+            ("Bring interface up/down", "ip link set <iface> up\nip link set <iface> down"),
+            ("Add IP to interface", "ip addr add <ip>/<mask> dev <iface>"),
+            ("Show link stats", "ip -s link show <iface>"),
+        ],
+    },
+    "dig / nslookup": {
+        "purpose": "DNS query and troubleshooting",
+        "examples": [
+            ("Basic lookup", "dig <hostname>"),
+            ("Specific DNS server", "dig @8.8.8.8 <hostname>"),
+            ("Reverse lookup", "dig -x <ip>"),
+            ("MX records", "dig <domain> MX"),
+            ("All records", "dig <domain> ANY"),
+            ("Trace delegation", "dig +trace <hostname>"),
+            ("Short answer", "dig +short <hostname>"),
+            ("nslookup", "nslookup <hostname> <dns_server>"),
+        ],
+    },
+}
+
+
+class NetworkTroubleshootTab(ttk.Frame):
+    def __init__(self, parent, conn):
+        super().__init__(parent)
+        self.conn = conn
+        self.build_ui()
+
+    def build_ui(self):
+        top_notebook = ttk.Notebook(self)
+        top_notebook.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Sub-tab 1: Flowcharts
+        flow_frame = ttk.Frame(top_notebook)
+        top_notebook.add(flow_frame, text=" Troubleshoot Flowcharts ")
+
+        flow_paned = ttk.PanedWindow(flow_frame, orient="horizontal")
+        flow_paned.pack(fill="both", expand=True, padx=5, pady=5)
+
+        flow_left = ttk.Frame(flow_paned)
+        flow_paned.add(flow_left, weight=1)
+
+        ttk.Label(flow_left, text="Scenarios", font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=5)
+        self.flow_listbox = tk.Listbox(flow_left, bg="#313244", fg="#cdd6f4", selectbackground="#585b70",
+                                        font=("Segoe UI", 10), activestyle="none")
+        self.flow_listbox.pack(fill="both", expand=True)
+        self.flow_keys = list(NETWORK_FLOWCHARTS.keys())
+        for key in self.flow_keys:
+            self.flow_listbox.insert("end", f"  {key}")
+        self.flow_listbox.bind("<<ListboxSelect>>", self.on_flow_select)
+
+        flow_right = ttk.Frame(flow_paned)
+        flow_paned.add(flow_right, weight=3)
+
+        self.flow_title = ttk.Label(flow_right, text="Select a scenario", font=("Segoe UI", 14, "bold"))
+        self.flow_title.pack(anchor="w", padx=5, pady=5)
+        self.flow_desc = ttk.Label(flow_right, text="", wraplength=700)
+        self.flow_desc.pack(anchor="w", padx=5)
+
+        self.flow_content = scrolledtext.ScrolledText(flow_right, bg="#313244", fg="#cdd6f4",
+                                                        insertbackground="#cdd6f4", font=("Consolas", 10), wrap="word")
+        self.flow_content.pack(fill="both", expand=True, padx=5, pady=5)
+        self.flow_content.tag_configure("step", foreground="#89b4fa", font=("Consolas", 10, "bold"))
+        self.flow_content.tag_configure("cmd", foreground="#a6e3a1")
+        self.flow_content.tag_configure("action", foreground="#fab387")
+        self.flow_content.tag_configure("sep", foreground="#585b70")
+
+        flow_btn = ttk.Frame(flow_right)
+        flow_btn.pack(fill="x", padx=5, pady=5)
+        ttk.Button(flow_btn, text="Copy Selected", command=lambda: self._copy_from(self.flow_content), style="Accent.TButton").pack(side="left", padx=3)
+        ttk.Button(flow_btn, text="Export Scenario", command=self.export_flow).pack(side="left", padx=3)
+
+        # Sub-tab 2: Tools Reference
+        tools_frame = ttk.Frame(top_notebook)
+        top_notebook.add(tools_frame, text=" Tools Reference ")
+
+        tools_paned = ttk.PanedWindow(tools_frame, orient="horizontal")
+        tools_paned.pack(fill="both", expand=True, padx=5, pady=5)
+
+        tools_left = ttk.Frame(tools_paned)
+        tools_paned.add(tools_left, weight=1)
+
+        ttk.Label(tools_left, text="Tools", font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=5)
+        self.tools_listbox = tk.Listbox(tools_left, bg="#313244", fg="#cdd6f4", selectbackground="#585b70",
+                                         font=("Segoe UI", 10), activestyle="none")
+        self.tools_listbox.pack(fill="both", expand=True)
+        self.tool_keys = list(NETWORK_TOOLS_REF.keys())
+        for key in self.tool_keys:
+            self.tools_listbox.insert("end", f"  {key}")
+        self.tools_listbox.bind("<<ListboxSelect>>", self.on_tool_select)
+
+        tools_right = ttk.Frame(tools_paned)
+        tools_paned.add(tools_right, weight=3)
+
+        self.tool_title = ttk.Label(tools_right, text="Select a tool", font=("Segoe UI", 14, "bold"))
+        self.tool_title.pack(anchor="w", padx=5, pady=5)
+        self.tool_purpose = ttk.Label(tools_right, text="", wraplength=700)
+        self.tool_purpose.pack(anchor="w", padx=5)
+
+        self.tool_content = scrolledtext.ScrolledText(tools_right, bg="#313244", fg="#cdd6f4",
+                                                        insertbackground="#cdd6f4", font=("Consolas", 11), wrap="word")
+        self.tool_content.pack(fill="both", expand=True, padx=5, pady=5)
+        self.tool_content.tag_configure("title", foreground="#89b4fa", font=("Consolas", 11, "bold"))
+        self.tool_content.tag_configure("cmd", foreground="#a6e3a1")
+        self.tool_content.tag_configure("sep", foreground="#585b70")
+
+        tools_btn = ttk.Frame(tools_right)
+        tools_btn.pack(fill="x", padx=5, pady=5)
+        ttk.Button(tools_btn, text="Copy Selected", command=lambda: self._copy_from(self.tool_content), style="Accent.TButton").pack(side="left", padx=3)
+
+        # Sub-tab 3: Quick Diagnostics
+        diag_frame = ttk.Frame(top_notebook)
+        top_notebook.add(diag_frame, text=" Quick Diagnostics ")
+
+        ttk.Label(diag_frame, text="One-click diagnostic command sets — copy and run on the target host",
+                  font=("Segoe UI", 10)).pack(anchor="w", padx=10, pady=10)
+
+        diag_sets = [
+            ("Full Network Health Check", """echo "=== INTERFACES ==="
+ip addr show
+echo "\\n=== ROUTING ==="
+ip route show
+echo "\\n=== DNS ==="
+cat /etc/resolv.conf
+echo "\\n=== LISTENING PORTS ==="
+ss -tlnp
+echo "\\n=== ESTABLISHED CONNECTIONS ==="
+ss -tnp state established | head -30
+echo "\\n=== FIREWALL ==="
+firewall-cmd --list-all 2>/dev/null || iptables -L -n
+echo "\\n=== ERRORS ==="
+ip -s link show | grep -A2 'errors\\|drops'
+echo "\\n=== ARP TABLE ==="
+ip neigh show"""),
+            ("SS8 Platform Network Check", """echo "=== SS8 SERVICES ==="
+systemctl status ss8-* 2>/dev/null || echo "No ss8 services found"
+echo "\\n=== SS8 CONNECTIONS ==="
+ss -tnp | grep -i ss8 | head -20
+echo "\\n=== SS8 LISTENING PORTS ==="
+ss -tlnp | grep -i ss8
+echo "\\n=== RECENT NETWORK ERRORS ==="
+journalctl --since '1 hour ago' | grep -i 'connection\\|timeout\\|refused\\|unreachable' | tail -20
+echo "\\n=== NTP STATUS ==="
+chronyc tracking 2>/dev/null || ntpstat 2>/dev/null
+echo "\\n=== CERTIFICATE EXPIRY ==="
+for cert in /etc/ss8/certs/*.pem /etc/pki/tls/certs/*.pem; do
+  [ -f "$cert" ] && echo "$cert: $(openssl x509 -enddate -noout -in $cert 2>/dev/null)"
+done"""),
+            ("Connection Test to Remote Host", """HOST="${1:-<REPLACE_WITH_HOST>}"
+PORT="${2:-<REPLACE_WITH_PORT>}"
+echo "=== PING TEST ==="
+ping -c 5 $HOST
+echo "\\n=== TRACEROUTE ==="
+traceroute -n -m 15 $HOST 2>/dev/null || tracepath $HOST
+echo "\\n=== PORT TEST ==="
+nc -zv -w5 $HOST $PORT 2>&1
+echo "\\n=== DNS RESOLUTION ==="
+dig +short $HOST
+echo "\\n=== ROUTE TO HOST ==="
+ip route get $(dig +short $HOST | head -1) 2>/dev/null"""),
+            ("Performance Baseline", """echo "=== INTERFACE STATS ==="
+ip -s link show
+echo "\\n=== TCP STATS ==="
+ss -s
+echo "\\n=== RETRANSMISSIONS ==="
+netstat -s | grep -i retrans 2>/dev/null || ss -ti | grep -c retrans
+echo "\\n=== SOCKET BUFFERS ==="
+sysctl net.core.rmem_max net.core.wmem_max net.ipv4.tcp_rmem net.ipv4.tcp_wmem
+echo "\\n=== CONNECTION STATES ==="
+ss -tan | awk '{print $1}' | sort | uniq -c | sort -rn
+echo "\\n=== TOP CONNECTIONS BY IP ==="
+ss -tn | awk '{print $5}' | cut -d: -f1 | sort | uniq -c | sort -rn | head -10"""),
+        ]
+
+        for title, script in diag_sets:
+            lf = ttk.LabelFrame(diag_frame, text=title)
+            lf.pack(fill="x", padx=10, pady=5)
+            txt = scrolledtext.ScrolledText(lf, height=6, bg="#313244", fg="#a6e3a1",
+                                             insertbackground="#cdd6f4", font=("Consolas", 9), wrap="word")
+            txt.pack(fill="x", padx=5, pady=5)
+            txt.insert("1.0", script.strip())
+            btn = ttk.Button(lf, text="Copy to Clipboard",
+                             command=lambda t=txt: self._copy_all(t))
+            btn.pack(anchor="e", padx=5, pady=3)
+
+    def on_flow_select(self, event):
+        sel = self.flow_listbox.curselection()
+        if not sel:
+            return
+        key = self.flow_keys[sel[0]]
+        scenario = NETWORK_FLOWCHARTS[key]
+        self.flow_title.config(text=key)
+        self.flow_desc.config(text=scenario["description"])
+        self.flow_content.config(state="normal")
+        self.flow_content.delete("1.0", "end")
+        for step_title, commands, action in scenario["steps"]:
+            self.flow_content.insert("end", f"\n  {step_title}\n", "step")
+            for line in commands.split("\n"):
+                self.flow_content.insert("end", f"    $ {line}\n", "cmd")
+            self.flow_content.insert("end", f"    → {action}\n", "action")
+            self.flow_content.insert("end", "  " + "─" * 65 + "\n", "sep")
+
+    def on_tool_select(self, event):
+        sel = self.tools_listbox.curselection()
+        if not sel:
+            return
+        key = self.tool_keys[sel[0]]
+        tool = NETWORK_TOOLS_REF[key]
+        self.tool_title.config(text=key)
+        self.tool_purpose.config(text=tool["purpose"])
+        self.tool_content.config(state="normal")
+        self.tool_content.delete("1.0", "end")
+        for desc, cmd in tool["examples"]:
+            self.tool_content.insert("end", f"  {desc}\n", "title")
+            for line in cmd.split("\n"):
+                self.tool_content.insert("end", f"    $ {line}\n", "cmd")
+            self.tool_content.insert("end", "  " + "─" * 60 + "\n", "sep")
+
+    def export_flow(self):
+        sel = self.flow_listbox.curselection()
+        if not sel:
+            messagebox.showinfo("Select", "Select a scenario first")
+            return
+        key = self.flow_keys[sel[0]]
+        scenario = NETWORK_FLOWCHARTS[key]
+        path = filedialog.asksaveasfilename(defaultextension=".txt", initialfile=f"Troubleshoot_{key.replace(' ','_')}.txt")
+        if not path:
+            return
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(f"NETWORK TROUBLESHOOTING: {key}\n{'='*60}\n{scenario['description']}\n\n")
+            for step_title, commands, action in scenario["steps"]:
+                f.write(f"{step_title}\n")
+                for line in commands.split("\n"):
+                    f.write(f"  $ {line}\n")
+                f.write(f"  → {action}\n\n")
+        messagebox.showinfo("Export", f"Exported to {path}")
+
+    def _copy_from(self, widget):
+        try:
+            sel = widget.get("sel.first", "sel.last").strip()
+            if sel:
+                sel = sel.lstrip("$ ").strip()
+                self.clipboard_clear()
+                self.clipboard_append(sel)
+                messagebox.showinfo("Copied", "Copied to clipboard")
+        except tk.TclError:
+            messagebox.showinfo("Select", "Highlight text first, then click Copy")
+
+    def _copy_all(self, widget):
+        content = widget.get("1.0", "end").strip()
+        if content:
+            self.clipboard_clear()
+            self.clipboard_append(content)
+            messagebox.showinfo("Copied", "Script copied to clipboard")
 
 
 # ─── Linux RHEL Cheat Sheet ─────────────────────────────────────────────
