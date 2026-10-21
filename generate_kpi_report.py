@@ -29,6 +29,7 @@ import numpy as np
 from pptx import Presentation
 from pptx.chart.data import CategoryChartData
 from pptx.util import Inches, Pt, Emu
+from pptx.enum.chart import XL_CHART_TYPE
 from pptx.dml.color import RGBColor
 
 # ---------------------------------------------------------------------------
@@ -169,6 +170,68 @@ def update_pie_chart(chart, categories, values):
     chart_data.categories = categories
     chart_data.add_series("Series 1", values)
     chart.replace_data(chart_data)
+
+
+def add_chart_slide(prs, title, subtitle, categories, series_dict, insert_before_idx=None):
+    """Add a new slide with a line chart. Returns the new slide."""
+    slide_layout = prs.slide_layouts[0]
+    slide = prs.slides.add_slide(slide_layout)
+
+    # Remove placeholder shapes inherited from layout
+    for shape in list(slide.placeholders):
+        sp = shape._element
+        sp.getparent().remove(sp)
+
+    # Move slide to correct position if needed
+    if insert_before_idx is not None:
+        xml_slides = prs.slides._sldIdLst
+        slides_list = list(xml_slides)
+        new_slide_elem = slides_list[-1]
+        xml_slides.remove(new_slide_elem)
+        xml_slides.insert(insert_before_idx, new_slide_elem)
+
+    # Add title text box
+    from pptx.util import Inches, Pt, Emu
+    txBox = slide.shapes.add_textbox(Emu(645160), Emu(266931), Emu(9063892), Emu(548483))
+    tf = txBox.text_frame
+    p = tf.paragraphs[0]
+    p.text = title
+    p.font.size = Pt(18)
+    p.font.bold = True
+    p.font.color.rgb = RGBColor(0, 51, 102)
+
+    # Add subtitle
+    txBox2 = slide.shapes.add_textbox(Emu(645160), Emu(815414), Emu(9063892), Emu(400000))
+    tf2 = txBox2.text_frame
+    p2 = tf2.paragraphs[0]
+    p2.text = subtitle
+    p2.font.size = Pt(12)
+    p2.font.color.rgb = RGBColor(100, 100, 100)
+
+    # Add chart
+    chart_data = CategoryChartData()
+    chart_data.categories = categories
+    for name, values in series_dict.items():
+        chart_data.add_series(name, values)
+
+    chart_frame = slide.shapes.add_chart(
+        XL_CHART_TYPE.LINE, Emu(645160), Emu(1300000),
+        Emu(10900000), Emu(5200000), chart_data
+    )
+    chart = chart_frame.chart
+    chart.has_legend = True
+    chart.legend.include_in_layout = False
+    chart.legend.font.size = Pt(8)
+
+    # Style the value axis
+    val_axis = chart.value_axis
+    val_axis.has_title = False
+    val_axis.major_gridlines.format.line.color.rgb = RGBColor(220, 220, 220)
+
+    if len(categories) > 50:
+        chart.category_axis.tick_labels.font.size = Pt(6)
+
+    return slide
 
 
 def update_table(table, data_rows):
@@ -971,8 +1034,76 @@ def generate_report():
                 pass
         print("  Slide 23: Daily per vendor traffic updated")
 
-    # --- Slide 24: Conclusion ---
-    slide24 = prs.slides[23]
+    # --- New slides: PDP/Bearer Success Rate ---
+    conclusion_idx = len(prs.slides) - 1  # conclusion is currently the last slide
+
+    # Ericsson PDP SR per vEPG
+    if df_pdp_sr_vepg is not None:
+        print("  Adding Ericsson PDP/Bearer SR slides...")
+        for col in ["PDP SR  2G", "PDP SR 3G", "4G Bearer activation SR"]:
+            matching = [c for c in df_pdp_sr_vepg.columns if col.strip() in c]
+            if matching:
+                df_pdp_sr_vepg[matching[0]] = pd.to_numeric(df_pdp_sr_vepg[matching[0]], errors="coerce")
+
+        name_col = "SGSN Name" if "SGSN Name" in df_pdp_sr_vepg.columns else "GGSN Name"
+        nodes = df_pdp_sr_vepg[name_col].dropna().unique().tolist()
+
+        # PDP SR 2G chart per node
+        sr_2g_col = [c for c in df_pdp_sr_vepg.columns if "PDP SR" in c and "2G" in c]
+        sr_3g_col = [c for c in df_pdp_sr_vepg.columns if "PDP SR" in c and "3G" in c]
+        sr_4g_col = [c for c in df_pdp_sr_vepg.columns if "Bearer" in c and "SR" in c]
+
+        if sr_2g_col and sr_3g_col and sr_4g_col:
+            for sr_col, sr_label in [(sr_2g_col[0], "PDP SR 2G"),
+                                      (sr_3g_col[0], "PDP SR 3G"),
+                                      (sr_4g_col[0], "4G Bearer Activation SR")]:
+                series = {}
+                cats = None
+                for node in nodes:
+                    sub = df_pdp_sr_vepg[df_pdp_sr_vepg[name_col] == node].sort_values("datetime")
+                    if cats is None:
+                        cats = [t.strftime("%Y-%m-%d %H:%M") for t in sub["datetime"]]
+                    series[node] = sub[sr_col].fillna(0).tolist()
+                if cats:
+                    add_chart_slide(prs,
+                                    f"Ericsson {sr_label} per Node (%)",
+                                    "Accessibility - Success Rate",
+                                    cats, series, insert_before_idx=conclusion_idx)
+                    conclusion_idx += 1
+            print("  Added 3 Ericsson SR slides (2G, 3G, 4G)")
+
+    # Huawei PDP/Bearer SR per vUGW
+    if df_pdp_sr_vugw is not None:
+        print("  Adding Huawei PDP/Bearer SR slides...")
+        pdp_sr_col = [c for c in df_pdp_sr_vugw.columns if "PDP context success ratio" in c]
+        br_sr_col = [c for c in df_pdp_sr_vugw.columns if "bearer context success ratio" in c]
+
+        df_pdp_sr_vugw["Start Time"] = pd.to_datetime(df_pdp_sr_vugw["Start Time"])
+        hw_sr_nodes = df_pdp_sr_vugw["NE Name"].unique().tolist()
+
+        for sr_col_list, sr_label in [(pdp_sr_col, "PDP Context SR (2G/3G)"),
+                                       (br_sr_col, "Bearer Context SR (4G)")]:
+            if not sr_col_list:
+                continue
+            col = sr_col_list[0]
+            df_pdp_sr_vugw[col] = pd.to_numeric(df_pdp_sr_vugw[col], errors="coerce")
+            series = {}
+            cats = None
+            for node in hw_sr_nodes:
+                sub = df_pdp_sr_vugw[df_pdp_sr_vugw["NE Name"] == node].sort_values("Start Time")
+                if cats is None:
+                    cats = [t.strftime("%Y-%m-%d %H:%M") for t in sub["Start Time"]]
+                series[node] = sub[col].fillna(0).tolist()
+            if cats:
+                add_chart_slide(prs,
+                                f"Huawei {sr_label} per Node (%)",
+                                "Accessibility - Success Rate",
+                                cats, series, insert_before_idx=conclusion_idx)
+                conclusion_idx += 1
+        print("  Added 2 Huawei SR slides (PDP, Bearer)")
+
+    # --- Conclusion (now at new index) ---
+    slide24 = prs.slides[conclusion_idx]
     if start_date and end_date:
         for shape in slide24.shapes:
             if shape.has_text_frame:
