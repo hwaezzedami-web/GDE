@@ -243,6 +243,36 @@ def update_pie_chart(chart, categories, values):
     chart.replace_data(chart_data)
 
 
+def remove_images(slide):
+    """Remove all picture shapes from a slide."""
+    for shape in list(slide.shapes):
+        if shape.shape_type == 13:  # PICTURE
+            sp = shape._element
+            sp.getparent().remove(sp)
+
+
+def add_chart_to_slide(slide, chart_type, categories, series_dict,
+                       left=Emu(645160), top=Emu(2100000),
+                       width=Emu(10900000), height=Emu(4400000)):
+    """Add a chart to an existing slide."""
+    chart_data = CategoryChartData()
+    chart_data.categories = categories
+    for name, values in series_dict.items():
+        chart_data.add_series(name, values)
+    chart_frame = slide.shapes.add_chart(
+        chart_type, left, top, width, height, chart_data
+    )
+    chart = chart_frame.chart
+    chart.has_legend = True
+    chart.legend.include_in_layout = False
+    chart.legend.font.size = Pt(8)
+    chart.value_axis.has_title = False
+    chart.value_axis.major_gridlines.format.line.color.rgb = RGBColor(220, 220, 220)
+    if len(categories) > 50:
+        chart.category_axis.tick_labels.font.size = Pt(6)
+    return chart
+
+
 def add_chart_slide(prs, title, subtitle, categories, series_dict, insert_before_idx=None):
     slide_layout = prs.slide_layouts[0]
     slide = prs.slides.add_slide(slide_layout)
@@ -493,19 +523,172 @@ def generate_report():
             total_4g_traffic += sgi_mb * MB_TO_TB
             total_23g_traffic += gn_mb * MB_TO_TB
 
+    # Remove old static images from slide 5
+    remove_images(slide5)
     for shape in slide5.shapes:
         try:
             if shape.has_chart:
                 ch = shape.chart
-                if "PIE" in ch.chart_type.name:
+                if shape.name == "Graphique 8":
                     update_pie_chart(ch, ["Huawei ", "Ericsson"],
                                      [huawei_total_traffic, ericsson_total_traffic])
                 elif "DOUGHNUT" in ch.chart_type.name:
                     update_pie_chart(ch, ["4G ", "2G/3G"],
                                      [total_4g_traffic, total_23g_traffic])
+                elif "PIE" in ch.chart_type.name:
+                    update_pie_chart(ch, ["Huawei ", "Ericsson"],
+                                     [huawei_total_traffic, ericsson_total_traffic])
         except Exception as e:
             print(f"  WARNING: Chart on slide 5: {e}")
     print("  Slide 5: Dashboard charts updated")
+
+    # --- Slides 6-9: Replace static images with real charts ---
+    # Build hourly time series for SAU and PDP per node
+    all_node_sau_hourly = {}  # {node: {time: {sau_2g, sau_3g, sau_4g, pdp_2g, pdp_3g, bearer_4g}}}
+    hourly_times_all = set()
+
+    if df_vusn is not None:
+        sau_2g_col = find_col(df_vusn.columns, "Gb", "attached", "users")
+        sau_3g_col = find_col(df_vusn.columns, "Iu", "attached", "users")
+        sau_4g_col = find_col(df_vusn.columns, "maximum attached users", exclude=["Gb", "Iu"])
+        pdp_2g_col = find_col(df_vusn.columns, "Gb", "PDP")
+        pdp_3g_col = find_col(df_vusn.columns, "Iu", "PDP")
+        bearer_4g_col = find_col(df_vusn.columns, "bearer", "S1") or find_col(df_vusn.columns, "Maximum bearer")
+
+        for col in [sau_2g_col, sau_3g_col, sau_4g_col, pdp_2g_col, pdp_3g_col, bearer_4g_col]:
+            if col:
+                df_vusn[col] = pd.to_numeric(df_vusn[col], errors="coerce")
+
+        for node in HUAWEI_NODES_USN:
+            sub = df_vusn[df_vusn["NE Name"] == node].sort_values("Start Time")
+            if len(sub) == 0:
+                continue
+            times = sub["Start Time"].tolist()
+            hourly_times_all.update(times)
+            all_node_sau_hourly[node] = {
+                "times": times,
+                "sau_2g": sub[sau_2g_col].fillna(0).tolist() if sau_2g_col else [],
+                "sau_3g": sub[sau_3g_col].fillna(0).tolist() if sau_3g_col else [],
+                "sau_4g": sub[sau_4g_col].fillna(0).tolist() if sau_4g_col else [],
+                "pdp_2g": sub[pdp_2g_col].fillna(0).tolist() if pdp_2g_col else [],
+                "pdp_3g": sub[pdp_3g_col].fillna(0).tolist() if pdp_3g_col else [],
+                "bearer_4g": sub[bearer_4g_col].fillna(0).tolist() if bearer_4g_col else [],
+            }
+
+    if df_attach is not None:
+        a_name_col = "SGSN Name" if "SGSN Name" in df_attach.columns else "GGSN Name"
+        a_sau_2g = find_col(df_attach.columns, "SAU", "2G")
+        a_sau_3g = find_col(df_attach.columns, "SAU", "3G")
+        a_sau_4g = find_col(df_attach.columns, "SAU", "4G")
+        a_pdp_2g = find_col(df_attach.columns, "PDP", "2G")
+        a_pdp_3g = find_col(df_attach.columns, "PDP", "3G")
+        a_bearer_4g = find_col(df_attach.columns, "Bearer", "4G")
+
+        for col in [a_sau_2g, a_sau_3g, a_sau_4g, a_pdp_2g, a_pdp_3g, a_bearer_4g]:
+            if col:
+                df_attach[col] = pd.to_numeric(df_attach[col], errors="coerce")
+
+        for node in ERICSSON_NODES_MME:
+            sub = df_attach[df_attach[a_name_col] == node].sort_values("datetime")
+            if len(sub) == 0:
+                continue
+            times = sub["datetime"].tolist()
+            hourly_times_all.update(times)
+            all_node_sau_hourly[node] = {
+                "times": times,
+                "sau_2g": sub[a_sau_2g].fillna(0).tolist() if a_sau_2g else [],
+                "sau_3g": sub[a_sau_3g].fillna(0).tolist() if a_sau_3g else [],
+                "sau_4g": sub[a_sau_4g].fillna(0).tolist() if a_sau_4g else [],
+                "pdp_2g": sub[a_pdp_2g].fillna(0).tolist() if a_pdp_2g else [],
+                "pdp_3g": sub[a_pdp_3g].fillna(0).tolist() if a_pdp_3g else [],
+                "bearer_4g": sub[a_bearer_4g].fillna(0).tolist() if a_bearer_4g else [],
+            }
+
+    if all_node_sau_hourly:
+        sorted_times = sorted(hourly_times_all)
+        time_cats = [t.strftime("%Y-%m-%d %H:%M") for t in sorted_times]
+
+        def build_node_series(metric):
+            series = {}
+            for node, data in all_node_sau_hourly.items():
+                td = dict(zip(data["times"], data[metric]))
+                series[node] = [td.get(t, 0) for t in sorted_times]
+            return series
+
+        # Slide 6: Attached Users per Node (SAU 4G per node over time)
+        slide6 = prs.slides[5]
+        remove_images(slide6)
+        add_chart_to_slide(slide6, XL_CHART_TYPE.LINE, time_cats,
+                           build_node_series("sau_4g"))
+        print("  Slide 6: Attached Users per Node chart added")
+
+        # Slide 7: Active PDP Context per Node (Bearer 4G per node over time)
+        slide7 = prs.slides[6]
+        remove_images(slide7)
+        add_chart_to_slide(slide7, XL_CHART_TYPE.LINE, time_cats,
+                           build_node_series("bearer_4g"))
+        print("  Slide 7: Active PDP Context per Node chart added")
+
+        # Slide 8: Total Attached Users & Total PDP Context (2 charts side by side)
+        slide8 = prs.slides[7]
+        remove_images(slide8)
+        # Total SAU per node = sau_2g + sau_3g + sau_4g
+        total_sau_series = {}
+        total_pdp_series = {}
+        for node, data in all_node_sau_hourly.items():
+            td_2g = dict(zip(data["times"], data["sau_2g"]))
+            td_3g = dict(zip(data["times"], data["sau_3g"]))
+            td_4g = dict(zip(data["times"], data["sau_4g"]))
+            total_sau_series[node] = [td_2g.get(t, 0) + td_3g.get(t, 0) + td_4g.get(t, 0) for t in sorted_times]
+            td_p2g = dict(zip(data["times"], data["pdp_2g"]))
+            td_p3g = dict(zip(data["times"], data["pdp_3g"]))
+            td_b4g = dict(zip(data["times"], data["bearer_4g"]))
+            total_pdp_series[node] = [td_p2g.get(t, 0) + td_p3g.get(t, 0) + td_b4g.get(t, 0) for t in sorted_times]
+
+        add_chart_to_slide(slide8, XL_CHART_TYPE.LINE, time_cats, total_sau_series,
+                           left=Emu(500000), top=Emu(2200000),
+                           width=Emu(5500000), height=Emu(3800000))
+        add_chart_to_slide(slide8, XL_CHART_TYPE.LINE, time_cats, total_pdp_series,
+                           left=Emu(6200000), top=Emu(2200000),
+                           width=Emu(5500000), height=Emu(3800000))
+        print("  Slide 8: Total SAU & PDP charts added")
+
+        # Slide 9: Peak Throughput per Node (from vUGW traffic data)
+        slide9 = prs.slides[8]
+        remove_images(slide9)
+        if df_traffic is not None and traffic_cols:
+            tp_series = {}
+            for node in df_traffic["NE Name"].unique():
+                sub = df_traffic[df_traffic["NE Name"] == node].sort_values("Start Time")
+                times_n = sub["Start Time"].tolist()
+                dl_peak = sub[traffic_cols["dl_4g_peak"]].fillna(0) if traffic_cols["dl_4g_peak"] else 0
+                ul_peak = sub[traffic_cols["ul_4g_peak"]].fillna(0) if traffic_cols["ul_4g_peak"] else 0
+                dl_23_peak = sub[traffic_cols["dl_23g_peak"]].fillna(0) if traffic_cols["dl_23g_peak"] else 0
+                ul_23_peak = sub[traffic_cols["ul_23g_peak"]].fillna(0) if traffic_cols["ul_23g_peak"] else 0
+                total_tp = ((dl_peak + ul_peak + dl_23_peak + ul_23_peak) * KBS_TO_GBPS).tolist()
+                tp_series[node] = total_tp
+            hw_tp_times = df_traffic.sort_values("Start Time")["Start Time"].unique()
+            hw_tp_cats = [pd.Timestamp(t).strftime("%Y-%m-%d %H:%M") for t in hw_tp_times]
+            # Re-align per node to common time axis
+            tp_series_aligned = {}
+            for node in df_traffic["NE Name"].unique():
+                sub = df_traffic[df_traffic["NE Name"] == node].set_index("Start Time")
+                vals = []
+                for t in hw_tp_times:
+                    t = pd.Timestamp(t)
+                    if t in sub.index:
+                        r = sub.loc[t]
+                        if isinstance(r, pd.DataFrame):
+                            r = r.iloc[0]
+                        v = sum(float(r.get(traffic_cols[k], 0) or 0) for k in ["dl_4g_peak", "ul_4g_peak", "dl_23g_peak", "ul_23g_peak"] if traffic_cols[k])
+                        vals.append(v * KBS_TO_GBPS)
+                    else:
+                        vals.append(0)
+                tp_series_aligned[node] = vals
+            add_chart_to_slide(slide9, XL_CHART_TYPE.LINE, hw_tp_cats, tp_series_aligned)
+            print("  Slide 9: Peak Throughput per Node chart added")
+    else:
+        print("  WARNING: No SAU/PDP hourly data available for slides 6-9")
 
     # Throughput and traffic slides (10-23)
     if df_traffic is not None and traffic_cols and df_epg is not None:
