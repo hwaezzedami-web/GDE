@@ -25,6 +25,7 @@ import numpy as np
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 from openpyxl.chart import LineChart, Reference
+from openpyxl.chart.axis import DateAxis
 from openpyxl.chart.label import DataLabelList
 
 SCRIPT_DIR = Path(__file__).parent.resolve()
@@ -180,11 +181,16 @@ def add_line_chart(ws, title, min_col, max_col, min_row, max_row, cat_col,
     chart.width = width
     chart.height = height
     chart.y_axis.title = None
+    chart.y_axis.numFmt = '#,##0'
+    chart.y_axis.delete = False
+
+    chart.x_axis = DateAxis()
     chart.x_axis.title = None
+    chart.x_axis.numFmt = 'DD-MMM'
     chart.x_axis.tickLblPos = "low"
     chart.x_axis.delete = False
-    chart.x_axis.numFmt = 'DD-MMM'
     chart.x_axis.majorTickMark = "out"
+    chart.x_axis.number_format = 'DD-MMM'
 
     data = Reference(ws, min_col=min_col, max_col=max_col, min_row=min_row, max_row=max_row)
     cats = Reference(ws, min_col=cat_col, min_row=min_row + 1, max_row=max_row)
@@ -193,7 +199,7 @@ def add_line_chart(ws, title, min_col, max_col, min_row, max_row, cat_col,
 
     for s in chart.series:
         s.graphicalProperties.line.width = 22000
-        s.smooth = True
+        s.smooth = False
 
     ws.add_chart(chart, target_cell)
     return chart
@@ -212,19 +218,20 @@ def find_kpi_folder(input_dir):
     return None
 
 
-def fmt_date(d):
-    """Format a date object as 'DD-Mon' string for chart categories."""
-    if hasattr(d, 'strftime'):
-        return d.strftime("%d-%b")
-    return str(d)
+def to_datetime(d):
+    """Convert a date object to datetime for Excel serialization."""
+    if isinstance(d, datetime):
+        return d
+    return datetime(d.year, d.month, d.day)
 
 
 def write_daily_table(ws, title, start_row, days, col_names, data_dict, num_fmt=DEC2_FMT):
-    """Write a daily table with string date column + numeric columns.
+    """Write a daily table with real date column + numeric columns.
     data_dict: {col_name: {date: value, ...}, ...}
-    Returns the row after the last data row.
+    Returns (header_row, end_row).
     """
-    ws.cell(start_row, 1, title).font = SUBTITLE_FONT
+    if title:
+        ws.cell(start_row, 1, title).font = SUBTITLE_FONT
     header_row = start_row + 1
     ws.cell(header_row, 1, "Date")
     for i, name in enumerate(col_names):
@@ -232,7 +239,9 @@ def write_daily_table(ws, title, start_row, days, col_names, data_dict, num_fmt=
     style_header_row(ws, header_row, len(col_names) + 1)
 
     for r, d in enumerate(days, header_row + 1):
-        ws.cell(r, 1, fmt_date(d))
+        cell = ws.cell(r, 1, to_datetime(d))
+        cell.number_format = 'DD-MMM-YYYY'
+        cell.alignment = Alignment(horizontal='center')
         for i, name in enumerate(col_names):
             v = data_dict.get(name, {}).get(d, 0)
             v = float(v) if pd.notna(v) else 0
@@ -240,6 +249,9 @@ def write_daily_table(ws, title, start_row, days, col_names, data_dict, num_fmt=
 
     end_row = header_row + len(days)
     style_data_area(ws, header_row + 1, end_row, len(col_names) + 1, num_fmt=num_fmt)
+    # Re-apply date format to column A (style_data_area overwrites it)
+    for r in range(header_row + 1, end_row + 1):
+        ws.cell(r, 1).number_format = 'DD-MMM-YYYY'
     return header_row, end_row
 
 
