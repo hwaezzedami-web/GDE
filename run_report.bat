@@ -15,7 +15,7 @@ if errorlevel 1 (
 
 REM Install required packages if needed
 echo Checking dependencies...
-pip install python-pptx openpyxl xlrd pandas --quiet 2>nul
+pip install openpyxl xlrd pandas --quiet 2>nul
 
 echo.
 echo Running report generator...

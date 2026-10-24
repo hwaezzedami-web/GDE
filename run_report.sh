@@ -5,7 +5,7 @@ echo "============================================"
 echo
 
 cd "$(dirname "$0")"
-pip install python-pptx openpyxl xlrd pandas -q 2>/dev/null
+pip install openpyxl xlrd pandas -q 2>/dev/null
 python3 generate_kpi_report.py
 
 echo
