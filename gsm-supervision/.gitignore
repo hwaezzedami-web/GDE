@@ -1,0 +1,31 @@
+# Secrets : jamais versionnés
+.env
+.env.omc
+*.secret
+
+# Données réelles de l'opérateur : jamais dans le dépôt
+referentiel-depot/*
+!referentiel-depot/.gitkeep
+omc-exports/*
+!omc-exports/.gitkeep
+config/exporters/*.json
+*.kmz
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+frontend/dist/
+
+# Divers
+logs/
+*.log
+.DS_Store

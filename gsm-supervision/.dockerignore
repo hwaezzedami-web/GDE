@@ -1,0 +1,12 @@
+.env
+.env.omc
+**/.git
+**/__pycache__
+**/.pytest_cache
+**/node_modules
+frontend/dist
+referentiel-depot
+omc-exports
+config/exporters
+*.kmz
+logs

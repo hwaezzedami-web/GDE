@@ -1,0 +1,70 @@
+# Supervision GSM Algérie : pile principale.
+# ATTENTION : ne jamais lancer « docker compose down -v » (supprime la base).
+#
+# Phase 1 : db + api. Les services collector et web (nginx) sont ajoutés aux phases 4 et 5.
+
+name: gsm-supervision
+
+x-app-env: &app-env
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: ${POSTGRES_DB:-gsm}
+  POSTGRES_USER: ${POSTGRES_USER:-gsm}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env}
+  JWT_SECRET: ${JWT_SECRET:?JWT_SECRET manquant dans .env}
+  INITIAL_ADMIN_USERNAME: ${INITIAL_ADMIN_USERNAME:-admin}
+  INITIAL_ADMIN_PASSWORD: ${INITIAL_ADMIN_PASSWORD:-}
+  LOGIN_MAX_FAILURES: ${LOGIN_MAX_FAILURES:-5}
+  LOGIN_LOCK_MINUTES: ${LOGIN_LOCK_MINUTES:-15}
+  JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-480}
+  EXPORT_MAX_ROWS: ${EXPORT_MAX_ROWS:-100000}
+  LOG_DIR: /srv/logs
+  TZ: Africa/Algiers
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gsm}
+      POSTGRES_USER: ${POSTGRES_USER:-gsm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD manquant dans .env}
+      TZ: Africa/Algiers
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - logs:/srv/logs
+    networks: [internal]
+    ports:
+      # Exposition locale uniquement ; nginx (phase 4) servira l'application sur le réseau.
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  internal:
+  # Réseau de sortie vers les OMC (lecture seule), utilisé par le collecteur (phase 5).
+  omc:
+
+volumes:
+  pgdata:
+  logs:
