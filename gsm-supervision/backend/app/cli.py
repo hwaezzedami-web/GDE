@@ -16,7 +16,7 @@ import os
 import sys
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 
 from .config import ConfigError, get_settings
 from .db import get_engine, get_sessionmaker
@@ -88,6 +88,44 @@ def cmd_unlock_user(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_seed_demo(_: argparse.Namespace) -> int:
+    from .collector.runner import ensure_demo_source, run_source
+
+    with get_sessionmaker()() as session:
+        source_id = ensure_demo_source(session)
+        outcome = run_source(session, source_id)
+    print(
+        json.dumps(
+            {
+                "source": outcome.source_code,
+                "status": outcome.status,
+                "error": outcome.error,
+                "sites_created": outcome.ingest.sites_created if outcome.ingest else 0,
+                "elements": outcome.ingest.elements if outcome.ingest else 0,
+                "alarms": outcome.ingest.alarms if outcome.ingest else 0,
+                "transitions": outcome.evaluation.site_transitions if outcome.evaluation else 0,
+            },
+            ensure_ascii=False,
+        )
+    )
+    return 0 if outcome.status == "OK" else 1
+
+
+def cmd_collect(args: argparse.Namespace) -> int:
+    from .collector.runner import run_source
+
+    with get_sessionmaker()() as session:
+        source_id = session.scalar(
+            text("SELECT id FROM omc_sources WHERE code = :c"), {"c": args.code}
+        )
+        if source_id is None:
+            print(f"Source {args.code} introuvable", file=sys.stderr)
+            return 1
+        outcome = run_source(session, source_id)
+    print(json.dumps({"source": outcome.source_code, "status": outcome.status, "error": outcome.error}, ensure_ascii=False))
+    return 0 if outcome.status == "OK" else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="python -m app.cli", description="Supervision GSM : administration")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -105,6 +143,14 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("unlock-user", help="déverrouille un compte")
     p.add_argument("username")
     p.set_defaults(func=cmd_unlock_user)
+
+    sub.add_parser("seed-demo", help="crée la source de démonstration fictive et la collecte").set_defaults(
+        func=cmd_seed_demo
+    )
+
+    p = sub.add_parser("collect", help="lance une collecte pour une source (code)")
+    p.add_argument("code")
+    p.set_defaults(func=cmd_collect)
     return parser
 
 

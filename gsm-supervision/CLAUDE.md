@@ -11,7 +11,7 @@ puis validation par l'utilisateur avant la phase suivante.
 | Phase | Contenu | État |
 |---|---|---|
 | 1 | Socle : Compose, schéma SQL, wilayas, modèles, `init-db`, auth, utilisateurs, audit | fait |
-| 2 | Moteur d'états, ingestion, connecteur `demo`, `seed-demo` | à faire |
+| 2 | Moteur d'états, ingestion, connecteur `demo`, `seed-demo` | fait |
 | 3 | API sites / carte / tableau de bord / exports, filtres communs | à faire |
 | 4 | Frontend React (carte pylônes 3D, fiches, tableau, dashboard, alarmes, admin) | à faire |
 | 5 | Collecteur, connecteurs `prometheus` / `file_export`, profils `A_COMPLETER`, `test-source` | à faire |
