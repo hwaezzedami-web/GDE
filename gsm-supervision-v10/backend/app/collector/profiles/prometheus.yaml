@@ -1,0 +1,84 @@
+# =============================================================================
+# Profil par défaut du connecteur Prometheus — « contrat de métriques » du projet
+# =============================================================================
+# Prometheus ne se connecte pas lui-même aux OMC : il collecte (scrape) des
+# EXPORTEURS qui interrogent les OMC en lecture seule et publient des métriques.
+# Ce profil définit les noms de métriques et de labels attendus par défaut
+# (voir docs/10_PROMETHEUS.md). Si vos exporteurs respectent ce contrat, une
+# source n'a besoin que de :  {"url": "http://prometheus:9090"}
+# Sinon, surcharger ici ou dans la configuration de la source (prioritaire) :
+# requêtes PromQL, noms de labels, correspondance des valeurs.
+#
+# ${vendor} est remplacé par l'équipementier de la source en minuscules
+# (ericsson, huawei, zte) : une même instance Prometheus peut ainsi servir de
+# source aux trois équipementiers, chacun filtré par le label vendor.
+# =============================================================================
+
+url: http://prometheus:9090        # URL de l'API Prometheus (lecture seule : /api/v1/query)
+timeout_s: 30
+tls_verify: true                   # false interdit en production ; préférer ca_file
+ca_file: null                      # autorité de certification interne (PEM)
+use_env_proxy: false               # ignorer HTTP(S)_PROXY : Prometheus est sur le réseau interne
+# Authentification (si Prometheus est protégé) : variables d'environnement
+#   OMC_<CODE>_USERNAME / OMC_<CODE>_PASSWORD   (basic auth)
+#   OMC_<CODE>_BEARER_TOKEN                     (jeton)
+
+# Santé de la collecte : si l'exporteur de l'OMC est injoignable (up == 0) ou
+# si aucune série n'est renvoyée, la collecte est en ÉCHEC (et non « tous les
+# sites DOWN ») : les états vieillissent puis passent INCONNU.
+health_query: 'up{job=~"gsm-omc-.*", vendor="${vendor}"}'
+min_series: 1                      # nombre minimal de séries d'état attendu
+
+# Référentiel des équipements (métrique « info », valeur toujours 1) — optionnel
+info:
+  query: 'gsm_ne_info{vendor="${vendor}"}'
+
+# État opérationnel de chaque équipement (BTS / NodeB / eNodeB / gNodeB / cellule)
+status:
+  query: 'gsm_ne_oper_status{vendor="${vendor}"}'
+  from: value                      # value : la valeur porte l'état ; label : un label le porte
+  label: null                      # nom du label si from = label
+
+# Correspondance labels Prometheus -> champs de l'application
+labels:
+  site_id: site_id                 # code site opérateur (commun aux technologies)
+  site_name: site_name
+  element_id: ne_id                # identifiant unique de l'équipement dans l'OMC
+  element_name: ne_name
+  element_type: ne_type
+  technology: technology           # 2G | 3G | 4G | 5G (ou GSM, UMTS, LTE, NR)
+  latitude: latitude               # degrés décimaux
+  longitude: longitude
+  wilaya_code: wilaya_code
+  commune: commune
+
+value_maps:
+  status:                          # valeur de gsm_ne_oper_status -> état
+    "1": UP
+    "0": DOWN
+    "2": DEGRADED
+  severity: {}                     # en plus de critical/major/minor/warning (reconnus d'office)
+  technology: {}
+
+derive:
+  site_id_regex: null              # si le code site doit être extrait de ne_id (groupe « site »)
+
+extra_labels: [omc, instance]      # labels conservés dans la fiche du site
+
+# Alarmes actives : alertmanager | promql | null (désactivé)
+alarms:
+  source: null
+  # --- source = alertmanager : API v2 en lecture (GET /api/v2/alerts)
+  url: http://alertmanager:9093
+  filter: ['vendor="${vendor}"']   # sélecteurs Alertmanager
+  include_silenced: false
+  # --- source = promql : une série par alarme active
+  query: 'gsm_ne_active_alarm{vendor="${vendor}"}'
+  raised_at_from_value: true       # la valeur = début de l'alarme (horodatage Unix)
+  labels:
+    alarm_id: alarm_id             # absent : empreinte de l'alerte (Alertmanager) ou des labels
+    element_id: ne_id
+    site_id: site_id
+    code: alertname                # pour une métrique : mettre « code »
+    severity: severity
+    description: annotations.summary   # Alertmanager : annotations.<nom> ; métrique : label

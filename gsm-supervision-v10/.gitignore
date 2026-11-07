@@ -1,0 +1,18 @@
+.env
+.env.omc
+backups/
+omc-exports/
+logs/
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+*.pyc
+.pytest_cache/
+config/known_hosts
+config/keys/
+config/nginx-auth/htpasswd
+# Référentiel de sites de l'opérateur : données réelles, jamais versionnées
+referentiel-depot/*
+!referentiel-depot/LISEZMOI.md
+*.kmz
+config/exporters/*.json

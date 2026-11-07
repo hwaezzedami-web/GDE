@@ -1,7 +1,7 @@
 /* Tokens de design : Supervision GSM. Source : docs/design/DESIGN.md
    Ne jamais coder une couleur en dur dans les composants : utiliser ces variables. */
 
-@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap");
+/* Polices : embarquées dans le projet (fonctionnement hors ligne), jamais chargées depuis Internet. */
 
 :root {
   /* Base */

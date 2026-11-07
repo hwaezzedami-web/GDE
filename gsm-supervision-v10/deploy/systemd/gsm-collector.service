@@ -1,0 +1,26 @@
+# Installation hors Docker — service de collecte OMC (lecture seule)
+[Unit]
+Description=GSM Supervision - Collecte OMC
+After=network-online.target postgresql.service gsm-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gsm
+Group=gsm
+WorkingDirectory=/opt/gsm-supervision/backend
+EnvironmentFile=/etc/gsm-supervision/gsm.env
+EnvironmentFile=/etc/gsm-supervision/omc.env
+Environment=DATA_DIR=/opt/gsm-supervision/data
+ExecStart=/opt/gsm-supervision/venv/bin/python -m app.collector.runner
+Restart=always
+RestartSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/gsm-supervision
+ReadOnlyPaths=/data/omc
+
+[Install]
+WantedBy=multi-user.target

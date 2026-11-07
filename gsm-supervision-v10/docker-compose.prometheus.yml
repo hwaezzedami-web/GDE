@@ -1,0 +1,128 @@
+# =============================================================================
+# Pile Prometheus (optionnelle) — à combiner avec docker-compose.yml :
+#   docker compose -f docker-compose.yml -f docker-compose.prometheus.yml up -d
+#
+# Si vous avez DÉJÀ un Prometheus / Alertmanager : n'utilisez pas ce fichier ;
+# indiquez simplement leur URL dans la configuration de la source (docs/10_PROMETHEUS.md).
+#
+# Accès web (protégé par mot de passe, via le nginx de l'application) :
+#   ${PUBLIC_URL}/prometheus/   et   ${PUBLIC_URL}/alertmanager/
+#   Créer le compte d'abord : ./scripts/prometheus_password.sh <utilisateur>
+#
+# Le service demo-exporter publie des données FICTIVES : le retirer (profil
+# « demo ») et déclarer vos exporteurs d'OMC dans deploy/prometheus/prometheus.yml.
+# =============================================================================
+services:
+  prometheus:
+    image: prom/prometheus:v3.11.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}
+      - --web.external-url=${PUBLIC_URL:-http://localhost:8080}/prometheus/
+      - --web.route-prefix=/
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/rules:/etc/prometheus/rules:ro
+      - promdata:/prometheus
+    ports:
+      - "${PROMETHEUS_BIND:-127.0.0.1}:9090:9090"   # interface Prometheus (local uniquement par défaut)
+    networks: [omc]
+
+  alertmanager:
+    image: prom/alertmanager:v0.31.1
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=${PUBLIC_URL:-http://localhost:8080}/alertmanager/
+      - --web.route-prefix=/
+    volumes:
+      - ./deploy/prometheus/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - amdata:/alertmanager
+    networks: [omc]
+
+  demo-exporter:
+    profiles: [demo]                      # démarré seulement avec --profile demo
+    image: python:3.13-slim
+    restart: unless-stopped
+    command: ["python", "/app/demo_exporter.py", "--csv", "/data/sites_fictifs.csv", "--port", "9800"]
+    volumes:
+      - ./tools/demo_exporter/demo_exporter.py:/app/demo_exporter.py:ro
+      - ./data/test/sites_fictifs.csv:/data/sites_fictifs.csv:ro
+    networks: [omc]
+
+  # ---------------------------------------------------------------------------
+  # Exporteurs d'OMC par fichiers (profil « huawei ») : un script lit le dernier
+  # export déposé par l'OMC et écrit les métriques dans un fichier .prom que
+  # node_exporter publie (collecteur textfile). Mise en place guidée :
+  #   ./scripts/omc_exporter.sh huawei aide
+  # ---------------------------------------------------------------------------
+  node-exporter:
+    profiles: [huawei, huawei-snmp, ericsson, zte]
+    image: prom/node-exporter:v1.9.1
+    restart: unless-stopped
+    command:
+      - --path.rootfs=/host                          # + métriques du serveur (CPU, mémoire, disques)
+      - --collector.textfile.directory=/textfile
+    volumes:
+      - /:/host:ro,rslave
+      - textfile:/textfile:ro
+    networks: [omc]                                   # aucun port publié : lu par Prometheus uniquement
+
+  omc-exporter-huawei:
+    profiles: [huawei]
+    image: python:3.13-slim
+    restart: unless-stopped
+    command: ["python", "/app/omc_textfile_exporter.py", "--config", "/config/huawei.json"]
+    volumes:
+      - ./tools/omc_textfile_exporter/omc_textfile_exporter.py:/app/omc_textfile_exporter.py:ro
+      - ./config/exporters/huawei.json:/config/huawei.json:ro
+      - ${OMC_EXPORT_DIR:-./omc-exports}/huawei:/data/omc/huawei:ro   # exports de l'OMC (lecture seule)
+      - textfile:/textfile
+    network_mode: none                                # lit des fichiers locaux : aucun accès réseau
+
+  # ---------------------------------------------------------------------------
+  # Alarmes Huawei par traps SNMP (profil « huawei-snmp ») : le MAE envoie ses alarmes
+  # (interface nord SNMP) à ce serveur. Mise en place guidée : ./scripts/snmp_alarms.sh huawei aide
+  # ---------------------------------------------------------------------------
+  snmp-trap-huawei:                                 # réception : traps enregistrés bruts (dossier d'attente)
+    profiles: [huawei-snmp]
+    build: ./tools/snmp_trap_receiver
+    image: gsm-supervision-snmptrap:1.0
+    restart: unless-stopped
+    env_file: [.env.omc]                            # OMC_HUAWEI_SNMP_* (secrets)
+    environment:
+      SOURCE_CODE: HUAWEI
+      SNMP_ALLOWED_SOURCES: ${HUAWEI_SNMP_SOURCES:-}   # IP du MAE (recommandé), vide = toutes
+    ports:
+      - "${SNMP_TRAP_BIND:-0.0.0.0}:${SNMP_TRAP_PORT:-162}:1162/udp"
+    volumes:
+      - snmp-huawei:/data
+    networks: [omc]
+
+  omc-alarms-huawei:                                # traitement : alarmes actives -> métriques
+    profiles: [huawei-snmp]
+    image: gsm-supervision-snmptrap:1.0
+    restart: unless-stopped
+    command: ["exporter", "--config", "/config/huawei_snmp.json"]
+    user: "0:0"                                     # écrit dans le volume textfile partagé (sans aucun réseau)
+    volumes:
+      - snmp-huawei:/data
+      - ./config/exporters/huawei_snmp.json:/config/huawei_snmp.json:ro
+      - textfile:/textfile
+    network_mode: none
+    depends_on: [snmp-trap-huawei]
+
+  # L'interface web rejoint le réseau de Prometheus pour publier /prometheus/ et /alertmanager/
+  web:
+    networks: [internal, omc]
+    volumes:
+      - ./config/nginx-auth:/etc/nginx/auth:ro
+
+volumes:
+  promdata:
+  amdata:
+  textfile:
+  snmp-huawei:

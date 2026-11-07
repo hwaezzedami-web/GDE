@@ -1,0 +1,27 @@
+# Installation hors Docker — API FastAPI
+# Hypothèses : code dans /opt/gsm-supervision, virtualenv /opt/gsm-supervision/venv,
+# configuration /etc/gsm-supervision/gsm.env (droits 640, propriétaire root:gsm)
+[Unit]
+Description=GSM Supervision - API
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gsm
+Group=gsm
+WorkingDirectory=/opt/gsm-supervision/backend
+EnvironmentFile=/etc/gsm-supervision/gsm.env
+Environment=DATA_DIR=/opt/gsm-supervision/data SQL_INIT_DIR=/opt/gsm-supervision/db/init
+ExecStartPre=/opt/gsm-supervision/venv/bin/python -m app.cli init-db
+ExecStart=/opt/gsm-supervision/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers --workers 2
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/log/gsm-supervision
+
+[Install]
+WantedBy=multi-user.target

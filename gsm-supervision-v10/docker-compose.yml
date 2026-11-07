@@ -1,0 +1,92 @@
+# =============================================================================
+# GSM Supervision Algérie — déploiement Docker Compose
+#   cp .env.example .env   (puis renseigner les secrets)
+#   docker compose up -d --build
+#   docker compose exec api python -m app.cli seed-demo     (données FICTIVES, optionnel)
+# =============================================================================
+name: gsm-supervision
+
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-gsm_supervision}
+      POSTGRES_USER: ${POSTGRES_USER:-gsm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD obligatoire}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Base non exposée à l'extérieur (réseau interne Docker uniquement)
+    networks: [internal]
+
+  api:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    image: gsm-supervision-backend:1.0
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-gsm}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-gsm_supervision}
+      LOG_DIR: /app/logs
+    depends_on:
+      db: { condition: service_healthy }
+    volumes:
+      - logs:/app/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health', timeout=4)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [internal]
+
+  collector:
+    image: gsm-supervision-backend:1.0
+    restart: unless-stopped
+    command: ["python", "-m", "app.collector.runner"]
+    env_file:
+      - .env
+      - .env.omc            # secrets des OMC (OMC_<CODE>_USERNAME / _PASSWORD / _DSN…)
+    environment:
+      DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-gsm}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-gsm_supervision}
+      LOG_DIR: /app/logs
+    depends_on:
+      api: { condition: service_healthy }
+    volumes:
+      - logs:/app/logs
+      - ${OMC_EXPORT_DIR:-./omc-exports}:/data/omc:ro       # exports déposés par les OMC (lecture seule)
+      - ./config:/app/config:ro                              # known_hosts SFTP, profils personnalisés
+      - ${REFERENCE_DROP_DIR:-./referentiel-depot}:/data/referentiel:ro   # référentiel de sites (import automatique)
+    # Le collecteur doit joindre les OMC : rattacher ce service au réseau d'administration
+    # autorisé (voir docs/05_INSTALLATION_EXPLOITATION.md, « Segmentation réseau »).
+    networks: [internal, omc]
+
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+      args:
+        VITE_TILE_URL: ${VITE_TILE_URL:-https://tile.openstreetmap.org/{z}/{x}/{y}.png}
+        VITE_TILE_ATTRIBUTION: ${VITE_TILE_ATTRIBUTION:-&copy; contributeurs OpenStreetMap}
+        VITE_REFRESH_SECONDS: ${VITE_REFRESH_SECONDS:-60}
+        VITE_BASEMAP: ${VITE_BASEMAP:-offline}
+    image: gsm-supervision-web:1.0
+    restart: unless-stopped
+    depends_on:
+      api: { condition: service_healthy }
+    ports:
+      - "${WEB_BIND:-0.0.0.0}:${WEB_PORT:-8080}:8080"
+    networks: [internal]
+
+volumes:
+  pgdata:
+  logs:
+
+networks:
+  internal:
+  omc:

@@ -1,0 +1,58 @@
+# Règles d'alertes Prometheus — transmises à Alertmanager, lu par le connecteur
+# (alarms.source = alertmanager). Les labels site_id / ne_id / severity et
+# l'annotation « summary » sont repris dans les alarmes de l'application.
+groups:
+  - name: gsm-omc
+    rules:
+      # Alarmes actives publiées par l'exporteur de l'OMC (une série par alarme)
+      - alert: GsmAlarmeOmc
+        expr: gsm_ne_active_alarm
+        labels:
+          source: omc
+        annotations:
+          summary: "{{ $labels.code }} {{ $labels.description }}"
+
+      # Équipement hors service selon l'état publié par l'OMC
+      - alert: GsmEquipementHorsService
+        expr: gsm_ne_oper_status == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "{{ $labels.technology }} hors service ({{ $labels.ne_id }})"
+
+      # Chaîne de collecte : l'exporteur de l'OMC ne répond plus (≠ panne radio)
+      - alert: GsmExporteurOmcInjoignable
+        expr: up{job=~"gsm-omc-.*"} == 0
+        for: 5m
+        labels:
+          severity: major
+        annotations:
+          summary: "Exporteur {{ $labels.job }} ({{ $labels.instance }}) injoignable"
+
+      # Exporteurs par fichiers (node_exporter textfile) : export OMC illisible ou trop ancien
+      - alert: GsmExportOmcEnEchec
+        expr: gsm_exporter_up == 0
+        for: 10m
+        labels:
+          severity: major
+        annotations:
+          summary: "Export de l'OMC {{ $labels.vendor }} illisible ou trop ancien (voir gsm_exporter_error)"
+
+      # Le script d'export ne tourne plus (son battement de cœur vieillit)
+      - alert: GsmScriptExportArrete
+        expr: time() - gsm_exporter_heartbeat_timestamp_seconds > 300
+        for: 5m
+        labels:
+          severity: major
+        annotations:
+          summary: "Script d'export de l'OMC {{ $labels.vendor }} arrêté"
+
+      # Réception des alarmes par traps SNMP : traitement arrêté
+      - alert: GsmRecepteurAlarmesArrete
+        expr: time() - gsm_alarm_receiver_heartbeat_timestamp_seconds > 120
+        for: 5m
+        labels:
+          severity: major
+        annotations:
+          summary: "Traitement des alarmes SNMP de l'OMC {{ $labels.vendor }} arrêté"

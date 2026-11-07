@@ -1,0 +1,50 @@
+{
+  "_comment": "Exemple de configuration : remplacer chaque A_COMPLETER à partir de l'export RÉEL de l'OMC (python3 omc_textfile_exporter.py --inspect <export.csv>). Les clés commençant par _ sont des commentaires. Le script refuse de démarrer tant qu'un A_COMPLETER subsiste.",
+  "vendor": "huawei",
+  "interval_s": 60,
+  "input": {
+    "_comment": "Répertoire (monté en lecture seule) où l'OMC dépose ses exports ; le plus récent est lu.",
+    "dir": "/data/omc/huawei",
+    "pattern": "A_COMPLETER_nom_du_fichier_*.csv",
+    "max_age_s": 1800,
+    "stable_s": 30,
+    "encoding": "utf-8-sig",
+    "delimiter": null,
+    "skip_lines": 0,
+    "comment_prefix": "#"
+  },
+  "columns": {
+    "_comment": "Noms EXACTS des colonnes de l'export. ne_id et status obligatoires ; site_id OU derive.site_id_regex ; technology OU technology_default ; null si absent.",
+    "ne_id": "A_COMPLETER_colonne_nom_ou_id_du_NE",
+    "ne_name": null,
+    "ne_type": null,
+    "status": "A_COMPLETER_colonne_etat_de_connexion",
+    "technology": null,
+    "site_id": null
+  },
+  "derive": {
+    "_comment": "Extraction du code site Mobilis depuis le nom du NE : groupe nommé (?P<site>...). Exemple à adapter : un nom contenant le code à 5 ou 6 chiffres.",
+    "site_id_regex": "A_COMPLETER ex. (?P<site>\\d{5,6})",
+    "site_id_from": "ne_id"
+  },
+  "technology_default": null,
+  "technology_map": {
+    "_comment_": "Valeur de la colonne technology (ou du type de NE) -> 2G / 3G / 4G / 5G, si elle n'est pas déjà GSM/UMTS/LTE/NR/2G..5G."
+  },
+  "status_map": {
+    "_comment_": "Chaque valeur d'état de l'export -> 1 (UP), 0 (DOWN) ou 2 (DÉGRADÉ). Les valeurs absentes sont ignorées et signalées (gsm_exporter_unmapped_status).",
+    "A_COMPLETER_valeur_connecte": 1,
+    "A_COMPLETER_valeur_deconnecte": 0
+  },
+  "status_case_insensitive": true,
+  "filter": {
+    "_comment": "Optionnel : ne garder que les lignes dont une colonne vaut une des valeurs (ex. types de NE radio).",
+    "column": null,
+    "values": []
+  },
+  "min_elements": 1,
+  "output": {
+    "dir": "/textfile",
+    "file": "gsm_huawei.prom"
+  }
+}

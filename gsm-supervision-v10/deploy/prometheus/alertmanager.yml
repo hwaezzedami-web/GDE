@@ -1,0 +1,10 @@
+# Alertmanager — l'application LIT les alertes actives via l'API v2 (aucune
+# notification n'est nécessaire). Ajouter des destinataires (mail, etc.) si besoin.
+route:
+  receiver: aucun
+  group_by: [alertname, vendor, site_id]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+receivers:
+  - name: aucun

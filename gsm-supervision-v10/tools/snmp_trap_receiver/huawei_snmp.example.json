@@ -1,0 +1,37 @@
+{
+  "_comment": "Correspondance traps SNMP de l'interface nord -> alarmes. Remplacer chaque A_COMPLETER à partir des traps RÉELS (./scripts/snmp_alarms.sh huawei inspecter) et de la MIB de l'interface nord fournie par Huawei pour votre version du MAE. OID au format numérique (.1.3.6.1.4.1....). Les clés commençant par _ sont des commentaires.",
+  "vendor": "huawei",
+  "timezone": "Africa/Algiers",
+  "encodings": ["utf-8", "gbk", "latin-1"],
+  "event": {
+    "_comment": "Comment distinguer apparition et disparition d'une alarme : par type de trap (by = trap_oid : listes d'OID de traps) ou par la valeur d'un champ (by = varbind : oid du champ + listes de valeurs). ignore : traps à ne pas traiter (battement de cœur de l'interface nord, synchronisation…).",
+    "by": "trap_oid",
+    "oid": null,
+    "raise": ["A_COMPLETER_oid_du_trap_apparition_alarme"],
+    "clear": ["A_COMPLETER_oid_du_trap_disparition_alarme"],
+    "ignore": []
+  },
+  "fields": {
+    "_comment": "OID du champ (varbind) portant chaque information. alarm_id (numéro unique de l'alarme, identique dans les traps d'apparition et de disparition) et name ou code sont obligatoires ; null si absent.",
+    "alarm_id": "A_COMPLETER_oid_numero_unique_alarme",
+    "code": null,
+    "name": "A_COMPLETER_oid_nom_alarme",
+    "severity": "A_COMPLETER_oid_gravite",
+    "ne_name": "A_COMPLETER_oid_nom_ne_ou_source",
+    "location": null,
+    "occurred": null
+  },
+  "severity_map": {
+    "_comment": "Valeur du champ gravité -> CRITICAL, MAJOR, MINOR, WARNING ou INDETERMINATE (comparaison sans tenir compte des majuscules).",
+    "A_COMPLETER_valeur_critique": "CRITICAL",
+    "A_COMPLETER_valeur_majeure": "MAJOR"
+  },
+  "site_id": {
+    "_comment": "Code site Mobilis extrait du nom du NE, de la localisation ou du nom de l'alarme (premier trouvé). Exemple : 5 chiffres (UNIVERSITE 17749, NodeB Name=3G_17749).",
+    "regex": "(?<![0-9])(?P<site>[0-9]{5})(?![0-9])",
+    "from": ["ne_name", "location"]
+  },
+  "expire_after_days": null,
+  "spool_keep_days": 7,
+  "output": { "dir": "/textfile", "file": "gsm_huawei_alarms.prom" }
+}

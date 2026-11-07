@@ -1,0 +1,106 @@
+# =============================================================================
+# Profil connecteur ZTE — MODÈLE À COMPLÉTER
+# =============================================================================
+# Ce fichier décrit COMMENT lire les données de vos OMC ZTE. Il ne contient
+# volontairement AUCUN nom de colonne, commande ou format supposé : chaque valeur
+# « A_COMPLETER » doit être renseignée à partir d'un export RÉEL de votre plateforme
+# (version logicielle exacte de l'OMC à préciser), puis validée (docs/07_VALIDATION.md).
+#
+# Les clés définies dans omc_sources.config (interface Admin > Sources OMC) sont
+# prioritaires sur ce profil : un même profil peut servir à plusieurs OMC ZTE.
+#
+# Questions à trancher avec l'équipe OSS / le support ZTE :
+#   - Quelle version exacte de l'OMC est déployée, et quelles interfaces nord (NBI) sont licenciées/activées ?
+#   - Existe-t-il un export planifiable (inventaire, état de connexion des NE, alarmes actives) ? Format, fréquence, emplacement ?
+#   - Quel champ porte le code site opérateur commun aux technologies (colonne dédiée, ou partie du nom du NE) ?
+#   - Quelle(s) valeur(s) signifient « NE déconnecté / hors service », et lesquelles signifient « en service » ?
+#   - Les coordonnées GPS sont-elles dans l'OMC, ou dans un référentiel séparé (base de planification radio) ?
+#   - Quelles alarmes signifient réellement « site hors service » (à déclarer comme règles validées) ?
+#   - Quel compte en lecture seule peut être créé, et depuis quel réseau le serveur de collecte y accède-t-il ?
+# =============================================================================
+
+# Interface effectivement disponible : file_export | sql_readonly | api
+interface: A_COMPLETER
+
+# --- Si interface = file_export ---------------------------------------------
+transport: local            # local (répertoire monté en lecture seule) ou sftp
+local:
+  path: /data/omc/zte   # répertoire où arrivent les exports
+sftp:
+  host: A_COMPLETER
+  port: 22
+  remote_dir: A_COMPLETER
+  known_hosts_file: /app/config/known_hosts   # empreinte du serveur (obligatoire)
+  timeout_s: 30
+  # Identifiants : variables d'environnement OMC_<CODE_SOURCE>_USERNAME / _PASSWORD
+  # ou _PRIVATE_KEY_PATH — jamais dans ce fichier.
+
+files:
+  inventory:
+    pattern: "A_COMPLETER"      # motif du fichier d'inventaire, ex. "<prefixe>*.csv"
+  status:
+    pattern: "A_COMPLETER"      # peut être identique à l'inventaire si l'état y figure
+  alarms:
+    pattern: "A_COMPLETER"      # liste des alarmes ACTIVES (supprimer la section si indisponible)
+    required: false
+
+csv:
+  delimiter: ""                 # vide = détection automatique
+  encoding: utf-8-sig
+  skip_rows: 0                  # lignes d'en-tête à ignorer avant les noms de colonnes
+
+# Refuser un export plus ancien que ce délai (s) : il ne doit pas paraître « frais »
+max_file_age_s: 3600
+
+# --- Si interface = sql_readonly --------------------------------------------
+# dsn_secret: DSN              # -> variable OMC_<CODE>_DSN
+# queries:
+#   inventory: "SELECT ... "   # requêtes fournies/validées par l'exploitant
+#   status:    "SELECT ... "
+#   alarms:    "SELECT ... "
+
+# --- Correspondance colonnes -> champs normalisés ---------------------------
+columns:
+  inventory:
+    site_id: A_COMPLETER        # code site opérateur (commun à 2G/3G/4G/5G)
+    site_name: A_COMPLETER
+    latitude: A_COMPLETER       # si absentes de l'OMC : fournir un fichier de coordonnées séparé
+    longitude: A_COMPLETER
+    element_id: A_COMPLETER     # identifiant unique de l'équipement dans cet OMC
+    element_name: A_COMPLETER
+    technology: A_COMPLETER     # ou element_type + value_maps.element_type_technology
+    # wilaya_code / wilaya / commune / address : à ajouter si disponibles
+  status:
+    element_id: A_COMPLETER
+    status: A_COMPLETER         # colonne portant l'état opérationnel / de connexion
+    observed_at: A_COMPLETER    # horodatage de l'état (sinon date du fichier)
+    # last_communication: ...
+  alarms:
+    alarm_id: A_COMPLETER       # identifiant unique et stable de l'alarme
+    element_id: A_COMPLETER
+    code: A_COMPLETER
+    description: A_COMPLETER
+    severity: A_COMPLETER
+    raised_at: A_COMPLETER
+    # cleared_at: ...
+
+# Si le code site n'est pas une colonne, l'extraire du nom de l'équipement
+# (groupe nommé « site ») :
+derive:
+  site_id_regex: null
+
+# --- Correspondance des valeurs ----------------------------------------------
+# Renseigner TOUTES les valeurs observées dans les exports réels.
+value_maps:
+  status: {}                   # "<valeur OMC>": UP | DOWN | DEGRADED | UNKNOWN
+  severity: {}                 # "<valeur OMC>": CRITICAL | MAJOR | MINOR | WARNING
+  technology: {}               # "<valeur OMC>": 2G | 3G | 4G | 5G
+  element_type_technology: {}  # "<type d'équipement>": 2G | 3G | 4G | 5G
+
+timestamps:
+  format: null                  # ex. "%Y-%m-%d %H:%M:%S" ; null = ISO 8601
+  timezone: Africa/Algiers      # fuseau des horodatages sans indication de fuseau
+
+extra_columns: []               # colonnes à conserver telles quelles dans la fiche site
+inventory_complete: true        # l'export contient TOUT l'inventaire de cet OMC
+alarms_complete: true           # l'export contient TOUTES les alarmes actives
