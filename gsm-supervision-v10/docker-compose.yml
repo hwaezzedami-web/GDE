@@ -46,6 +46,7 @@ services:
     networks: [internal]
 
   collector:
+    build: { context: ., dockerfile: backend/Dockerfile }
     image: gsm-supervision-backend:1.0
     restart: unless-stopped
     command: ["python", "-m", "app.collector.runner"]
