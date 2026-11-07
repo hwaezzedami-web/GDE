@@ -50,7 +50,7 @@ export default function Layout() {
           <button type="button" className="btn btn-ghost" onClick={() => logout()} aria-label="Déconnexion" title="Déconnexion">⏻<span className="logout-text">Déconnexion</span></button>
         </div>
       </header>
-      <main className="content"><Outlet /></main>
+      <main className="content"><div key={loc.pathname} className="page-enter"><Outlet /></div></main>
     </div>
   );
 }

@@ -29,3 +29,28 @@ Base : `gsm-supervision_10.zip`. Le backend n'a pas été modifié : ses 63 test
 - Pylône inconnu en pointillés : vérifié dans le code, pas à fort zoom sur un site réel.
 - Le taux de passage de la fiche site sur téléphone (panneau en bas) n'a pas été recontrôlé.
 - La taille du bundle JavaScript (≈ 880 Ko) reste élevée ; un découpage par page serait à étudier.
+
+## Deuxième passe : finition et mouvement
+
+Ajouts (tous désactivés si l'utilisateur demande moins d'animations) :
+
+- **Entrée de page** : fondu et léger glissement à chaque changement de page.
+- **Tableau de bord** : les cartes apparaissent l'une après l'autre, en une seule séquence à l'ouverture.
+- **Compteurs** : les chiffres s'incrémentent en douceur quand leur valeur change ; le texte final est exact.
+- **Chargement** : un reflet parcourt les blocs en attente, au lieu d'un vide.
+- **Boutons et compteurs** : retour visuel au clic (léger tassement), focus clavier plus net.
+- **Navigation** : le soulignement de l'onglet actif glisse en douceur.
+- **Panneau de détail** : glisse depuis la droite (ou monte depuis le bas sur téléphone).
+- **Tableaux** : survol discret des lignes.
+- **Titres de section** : passés en casse de phrase (plus de MAJUSCULES), plus lisibles.
+
+Accessibilité : `prefers-reduced-motion` supprime toutes les animations ; aucune information n'est
+transmise par le seul mouvement.
+
+Vérifié : pages Carte, Tableau de bord, Alarmes, Référentiel, Administration (bureau et téléphone),
+aucune erreur console, hauteur de la carte inchangée.
+
+Limites connues :
+- La page Administration affiche les statuts en texte brut (« SUCCESS »), alors que les autres pages
+  utilisent des badges : à harmoniser.
+- Les graphiques du tableau de bord gardent les couleurs d'état ; une palette dédiée serait plus élégante.

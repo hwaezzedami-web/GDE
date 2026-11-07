@@ -1,3 +1,4 @@
+import AnimatedNumber from './AnimatedNumber';
 import { STATUS, fmtInt } from '../lib/constants';
 
 // Bandeau de compteurs cliquables : un clic filtre la carte sur l'état.
@@ -17,14 +18,14 @@ export default function KpiStrip({ totals, onPick, active = [] }) {
       {items.map(([k, label, v, c]) => (
         <button key={k} type="button" className={`kpi${active.length === 1 && active[0] === k ? ' on' : ''}`}
           style={{ '--c': c }} onClick={() => onPick?.(k === 'TOTAL' ? [] : [k])}>
-          <span className="kpi-v">{fmtInt(v)}</span>
+          <span className="kpi-v"><AnimatedNumber value={v} /></span>
           <span className="kpi-l">{label}
             {k !== 'TOTAL' && totals.total > 0 && <span className="kpi-p"> · {((100 * v) / totals.total).toFixed(1)} %</span>}</span>
         </button>
       ))}
       {totals.stale > 0 && (
         <div className="kpi kpi-note" title="Sites dont une partie des données est périmée">
-          <span className="kpi-v">{fmtInt(totals.stale)}</span><span className="kpi-l">données périmées</span>
+          <span className="kpi-v"><AnimatedNumber value={totals.stale} /></span><span className="kpi-l">données périmées</span>
         </div>
       )}
     </div>

@@ -27,7 +27,7 @@ a { color: var(--accent); }
 code, .mono { font-family: var(--mono); font-size: .92em; }
 h1 { font-size: 18px; margin: 0; letter-spacing: -.01em; }
 h2 { font-size: 17px; margin: 0; }
-h3 { font-size: 13px; margin: 16px 0 8px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+h3 { font-size: 14px; font-weight: 650; margin: 16px 0 8px; color: var(--text); }
 .muted { color: var(--muted); }
 .small { font-size: 12px; }
 .err { color: var(--down); }
@@ -347,3 +347,73 @@ dialog.modal::backdrop { overflow: hidden; overscroll-behavior: contain; }
 div.pick.on { border: 1px solid var(--accent); border-radius: 6px; background: #eef5fc; margin: -6px 0 12px; cursor: default; }
 .pos-pin span { position: absolute; left: 1px; top: 0; width: 20px; height: 20px; border-radius: 50% 50% 50% 0; background: var(--accent); border: 2px solid #fff; transform: rotate(-45deg); box-shadow: 0 2px 6px rgba(0, 0, 0, .4); }
 .pos-pin span::after { content: ""; position: absolute; left: 5px; top: 5px; width: 6px; height: 6px; border-radius: 50%; background: #fff; }
+
+/* ================================================================ mouvement et finition
+   Principe : peu d'animations, toutes en réponse à une action ou à l'arrivée sur une page.
+   Durées courtes (150 à 450 ms), courbe de sortie douce. Désactivées si l'utilisateur les refuse. */
+:root {
+  --ease-out: cubic-bezier(.2, .7, .2, 1);
+  --dur-fast: 150ms;
+  --dur-base: 240ms;
+  --dur-slow: 420ms;
+  --shadow-lift: 0 1px 2px rgba(15, 23, 42, .06), 0 10px 24px rgba(15, 23, 42, .10);
+}
+
+/* Arrivée sur une page : léger glissement et fondu */
+@keyframes page-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.page-enter { height: 100%; min-height: 0; display: flex; flex-direction: column; animation: page-in var(--dur-slow) var(--ease-out) both; }
+.page-enter > * { flex: 1 1 auto; min-height: 0; }
+
+/* Tableau de bord : les cartes apparaissent l'une après l'autre (une seule séquence, à l'ouverture) */
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.grid > * { animation: rise var(--dur-slow) var(--ease-out) both; }
+.grid > *:nth-child(2) { animation-delay: 60ms; }
+.grid > *:nth-child(3) { animation-delay: 120ms; }
+.grid > *:nth-child(4) { animation-delay: 180ms; }
+.grid > *:nth-child(5) { animation-delay: 240ms; }
+.grid > *:nth-child(n+6) { animation-delay: 300ms; }
+
+/* Chargement : reflet qui parcourt le bloc, plutôt qu'un vide */
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.kpis.skeleton, .skeleton {
+  background: linear-gradient(90deg, var(--surface-2) 25%, var(--border) 50%, var(--surface-2) 75%) 0 0 / 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: var(--radius);
+}
+
+/* Compteurs : léger tassement au clic, transitions des états de survol */
+.kpi { transition: box-shadow var(--dur-base) var(--ease-out), transform var(--dur-fast) var(--ease-out), border-color var(--dur-base) var(--ease-out); }
+.kpi:hover:not(:disabled) { box-shadow: var(--shadow-lift); }
+.kpi:active:not(:disabled) { transform: scale(.98); }
+.num-anim { font-variant-numeric: tabular-nums; }
+
+/* Boutons : retour visuel net au clic */
+.btn { transition: background-color var(--dur-fast) var(--ease-out), filter var(--dur-fast) var(--ease-out), transform var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out); }
+.btn:active:not(:disabled) { transform: translateY(1px) scale(.985); }
+.btn:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* Navigation : soulignement qui glisse sur l'onglet actif */
+.nav a { transition: color var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out); }
+
+/* Panneau de détail : glisse depuis la droite (ou depuis le bas sur téléphone) */
+@keyframes detail-in { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: none; } }
+.detail { animation: detail-in var(--dur-base) var(--ease-out) both; }
+@media (max-width: 900px) {
+  @keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  .detail { animation-name: sheet-in; }
+}
+
+/* Lignes de tableau : survol lisible */
+tbody tr { transition: background-color var(--dur-fast) var(--ease-out); }
+tbody tr:hover { background: color-mix(in srgb, var(--accent) 5%, transparent); }
+
+/* Mouvement réduit : aucune animation, états finaux affichés immédiatement */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
