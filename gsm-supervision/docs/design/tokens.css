@@ -1,0 +1,134 @@
+/* Tokens de design : Supervision GSM. Source : docs/design/DESIGN.md
+   Ne jamais coder une couleur en dur dans les composants : utiliser ces variables. */
+
+@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;500;700&family=Noto+Naskh+Arabic:wght@400;700&display=swap");
+
+:root {
+  /* Base */
+  --bg: #eef1f4;
+  --surface: #ffffff;
+  --ink: #17202a;
+  --ink-muted: #556272;
+  --line: #d3dae3;
+  --accent: #1f5fbf;
+  --accent-ink: #ffffff;
+  --focus: #1f5fbf;
+
+  /* États (couleur de trait et de texte) */
+  --up: #1c7c54;
+  --degraded: #a65f00;
+  --down: #b42318;
+  --unknown: #5e4b8b;
+  --unsupervised: #6b7685;
+
+  /* États (fond des badges) */
+  --up-bg: #e3f4ec;
+  --degraded-bg: #fbefd9;
+  --down-bg: #fbe4e2;
+  --unknown-bg: #ece8f5;
+  --unsupervised-bg: #e7ebf0;
+
+  /* Typographie */
+  --font-ui: "Atkinson Hyperlegible Next", "Segoe UI", system-ui, sans-serif;
+  --font-ar: "Noto Naskh Arabic", "Traditional Arabic", serif;
+  --text-xs: 0.75rem;   /* 12 px */
+  --text-sm: 0.875rem;  /* 14 px, base */
+  --text-md: 1.0625rem; /* 17 px */
+  --text-lg: 1.25rem;   /* 20 px */
+  --text-xl: 1.5rem;    /* 24 px */
+  --text-2xl: 1.8125rem;/* 29 px */
+
+  /* Espacement (grille de 4 px) */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-6: 1.5rem;
+  --s-8: 2rem;
+
+  /* Rayons : deux seulement */
+  --radius-control: 3px;
+  --radius-panel: 8px;
+
+  /* Une seule ombre, pour le panneau flottant */
+  --shadow-panel: 0 12px 32px rgb(23 32 42 / 0.18);
+
+  /* Mouvement */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 160ms;
+  --dur-panel: 260ms;
+}
+
+/* Mode sombre : préférence du système, ou forcé par data-theme="dark" */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1720;
+    --surface: #17212c;
+    --ink: #e8edf3;
+    --ink-muted: #9aa7b6;
+    --line: #2a3644;
+    --accent: #7aa7f0;
+    --accent-ink: #0f1720;
+    --focus: #9cc0ff;
+    --up: #4fbf8b;
+    --degraded: #e8a33d;
+    --down: #ff7a6e;
+    --unknown: #b3a2e6;
+    --unsupervised: #9aa5b3;
+    --up-bg: #15382a;
+    --degraded-bg: #3a2c12;
+    --down-bg: #3d1d1a;
+    --unknown-bg: #2b2540;
+    --unsupervised-bg: #252e39;
+    --shadow-panel: 0 12px 32px rgb(0 0 0 / 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1720;
+  --surface: #17212c;
+  --ink: #e8edf3;
+  --ink-muted: #9aa7b6;
+  --line: #2a3644;
+  --accent: #7aa7f0;
+  --accent-ink: #0f1720;
+  --focus: #9cc0ff;
+  --up: #4fbf8b;
+  --degraded: #e8a33d;
+  --down: #ff7a6e;
+  --unknown: #b3a2e6;
+  --unsupervised: #9aa5b3;
+  --up-bg: #15382a;
+  --degraded-bg: #3a2c12;
+  --down-bg: #3d1d1a;
+  --unknown-bg: #2b2540;
+  --unsupervised-bg: #252e39;
+  --shadow-panel: 0 12px 32px rgb(0 0 0 / 0.5);
+}
+
+/* Socle commun */
+html, body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+:lang(ar) { font-family: var(--font-ar); }
+
+.num { font-variant-numeric: tabular-nums; }
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

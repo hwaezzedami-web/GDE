@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aperçu du design · Supervision GSM</title>
+  <link rel="stylesheet" href="tokens.css">
+  <style>
+    .app { min-height: 100vh; display: grid; grid-template-rows: auto auto 1fr; }
+
+    header.top {
+      display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; justify-content: space-between;
+      padding: var(--s-3) var(--s-4); background: var(--surface); border-bottom: 1px solid var(--line);
+    }
+    .wordmark { font-size: var(--text-lg); font-weight: 700; }
+    .wordmark span { font-weight: 400; color: var(--ink-muted); }
+    .search {
+      font: inherit; min-width: 14rem; padding: var(--s-2) var(--s-3);
+      border: 1px solid var(--line); border-radius: var(--radius-control);
+      background: var(--bg); color: var(--ink);
+    }
+    .updated { color: var(--ink-muted); font-size: var(--text-xs); }
+
+    /* Bande de statuts : les compteurs sont le premier contenu lu */
+    .strip {
+      display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+      background: var(--surface); border-bottom: 1px solid var(--line);
+    }
+    .strip > div { padding: var(--s-3) var(--s-4); border-left: 3px solid transparent; }
+    .strip > div + div { border-left-color: var(--line); }
+    .strip strong { display: block; font-size: var(--text-xl); font-weight: 700; }
+    .strip .s-up strong { color: var(--up); }
+    .strip .s-degraded strong { color: var(--degraded); }
+    .strip .s-down strong { color: var(--down); }
+    .strip .s-unknown strong { color: var(--unknown); }
+    .strip .s-unsupervised strong { color: var(--unsupervised); }
+    .strip span { color: var(--ink-muted); font-size: var(--text-xs); }
+
+    .main { display: grid; grid-template-columns: 14rem minmax(0, 1fr); min-height: 0; }
+    main { display: flex; flex-direction: column; min-width: 0; }
+    .rail { background: var(--surface); border-right: 1px solid var(--line); padding: var(--s-3); }
+    .rail a {
+      display: block; padding: var(--s-2) var(--s-3); border-radius: var(--radius-control);
+      color: var(--ink); text-decoration: none;
+    }
+    .rail a[aria-current="page"] { background: var(--bg); font-weight: 700; color: var(--accent); }
+    .rail a:hover { background: var(--bg); }
+
+    .map {
+      position: relative; flex: 1; min-height: 28rem; overflow: hidden;
+      background:
+        linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 48px 48px,
+        linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 48px 48px,
+        var(--bg);
+      background-blend-mode: normal;
+    }
+    .map .site { position: absolute; display: flex; flex-direction: column; align-items: center; font-size: var(--text-xs); }
+    .map .site b { font-weight: 700; background: var(--surface); padding: 0 var(--s-1); border-radius: var(--radius-control); }
+    .map .site.is-selected .pylon { outline: 2px solid var(--focus); outline-offset: 4px; border-radius: 50%; }
+
+    .pylon { width: 2rem; height: 2rem; display: block; }
+    .pylon--up { color: var(--up); }
+    .pylon--degraded { color: var(--degraded); }
+    .pylon--down { color: var(--down); }
+    .pylon--unknown { color: var(--unknown); }
+    .pylon--unsupervised { color: var(--unsupervised); }
+
+    /* Légende */
+    .legend {
+      position: absolute; left: var(--s-3); bottom: var(--s-3); right: var(--s-3);
+      display: flex; flex-wrap: wrap; gap: var(--s-2) var(--s-4);
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel);
+      padding: var(--s-2) var(--s-3); align-items: center;
+    }
+    .legend div { display: flex; align-items: center; gap: var(--s-2); font-size: var(--text-xs); }
+    .legend .pylon { width: 1.5rem; height: 1.5rem; }
+
+    /* Bannière de collecte en échec */
+    .banner {
+      display: flex; flex-wrap: wrap; gap: var(--s-3); align-items: center; justify-content: space-between;
+      margin: var(--s-3); padding: var(--s-3) var(--s-4);
+      background: var(--degraded-bg); color: var(--ink);
+      border-left: 4px solid var(--degraded); border-radius: var(--radius-panel);
+    }
+    .banner p { margin: 0; max-width: 60ch; }
+
+    .btn {
+      font: inherit; font-weight: 700; padding: var(--s-2) var(--s-4);
+      border-radius: var(--radius-control); border: 1px solid var(--accent);
+      background: var(--accent); color: var(--accent-ink); cursor: pointer;
+    }
+    .btn--quiet { background: transparent; color: var(--accent); }
+
+    /* Panneau de détail */
+    .panel {
+      position: absolute; top: var(--s-3); right: var(--s-3); bottom: 5.5rem; width: min(22rem, calc(100% - 1.5rem));
+      background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel);
+      box-shadow: var(--shadow-panel); padding: var(--s-4); overflow: auto;
+      animation: slide var(--dur-panel) var(--ease-out);
+    }
+    @keyframes slide { from { transform: translateX(1rem); opacity: 0; } to { transform: none; opacity: 1; } }
+    .panel h2 { font-size: var(--text-lg); margin: 0 0 var(--s-1); }
+    .panel .muted { color: var(--ink-muted); }
+    .badge {
+      display: inline-flex; align-items: center; gap: var(--s-2); padding: 2px var(--s-2);
+      border-radius: var(--radius-control); font-weight: 700; font-size: var(--text-xs);
+    }
+    .badge--down { background: var(--down-bg); color: var(--down); }
+    .badge .pylon { width: 1rem; height: 1rem; }
+    dl { display: grid; grid-template-columns: auto 1fr; gap: var(--s-2) var(--s-4); margin: var(--s-4) 0; }
+    dt { color: var(--ink-muted); }
+    dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: var(--s-2); border-bottom: 1px solid var(--line); }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    @media (max-width: 760px) {
+      .strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .strip > div { border-left: 0; border-top: 1px solid var(--line); }
+      .strip > div:nth-child(-n+2) { border-top: 0; }
+      .strip > div:nth-child(even) { border-left: 1px solid var(--line); }
+      .strip > div:last-child { grid-column: 1 / -1; }
+      .main { grid-template-columns: 1fr; }
+      .rail { display: flex; gap: var(--s-2); overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .rail a { white-space: nowrap; }
+      .map { min-height: 22rem; }
+      .legend { position: static; margin: var(--s-3); flex-direction: column; align-items: flex-start; }
+      .panel {
+        position: fixed; top: auto; left: 0; right: 0; bottom: 0; width: auto; max-height: 60vh;
+        border-radius: var(--radius-panel) var(--radius-panel) 0 0; border-bottom: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Les cinq pylônes : la forme porte l'état, la couleur n'est que le renfort -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="p-up" viewBox="0 0 32 32">
+      <polygon points="16,6 23,28 9,28" fill="currentColor"/>
+      <path d="M6 10 Q2 16 6 22 M26 10 Q30 16 26 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="p-degraded" viewBox="0 0 32 32">
+      <polygon points="16,6 23,28 9,28" fill="currentColor"/>
+      <path d="M26 10 Q30 16 26 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="p-down" viewBox="0 0 32 32">
+      <polygon points="16,6 23,28 9,28" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round"/>
+      <path d="M5 5 L27 27" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+    <symbol id="p-unknown" viewBox="0 0 32 32">
+      <polygon points="16,6 23,28 9,28" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 3" stroke-linejoin="round"/>
+    </symbol>
+    <symbol id="p-unsupervised" viewBox="0 0 32 32">
+      <circle cx="16" cy="16" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+    </symbol>
+  </svg>
+
+  <div class="app">
+    <header class="top">
+      <div class="wordmark">Supervision GSM <span>· Algérie</span></div>
+      <input class="search" type="search" placeholder="Rechercher un site" aria-label="Rechercher un site">
+      <div class="updated">Dernière mise à jour 14:32</div>
+    </header>
+
+    <section class="strip" aria-label="Résumé des états">
+      <div class="s-up"><strong class="num">1 284</strong><span>stables</span></div>
+      <div class="s-degraded"><strong class="num">37</strong><span>dégradés</span></div>
+      <div class="s-down"><strong class="num">12</strong><span>hors service</span></div>
+      <div class="s-unknown"><strong class="num">9</strong><span>inconnus, collecte perdue</span></div>
+      <div class="s-unsupervised"><strong class="num">214</strong><span>non supervisés</span></div>
+    </section>
+
+    <div class="main">
+      <nav class="rail" aria-label="Navigation principale">
+        <a href="#" aria-current="page">Carte</a>
+        <a href="#">Sites</a>
+        <a href="#">Alarmes</a>
+        <a href="#">Tableau de bord</a>
+        <a href="#">Administration</a>
+      </nav>
+
+      <main>
+        <div class="banner" role="alert">
+          <p>Collecte Huawei en échec depuis 12 min. Les sites de cette source sont affichés en inconnu jusqu'au retour de la collecte.</p>
+          <button class="btn" type="button">Relancer la collecte</button>
+        </div>
+
+        <div class="map" role="img" aria-label="Carte des sites : exemples des cinq états">
+          <div class="site" style="left: 12%; top: 18%"><svg class="pylon pylon--up"><use href="#p-up"/></svg><b>160001</b></div>
+          <div class="site" style="left: 30%; top: 40%"><svg class="pylon pylon--degraded"><use href="#p-degraded"/></svg><b>310112</b></div>
+          <div class="site is-selected" style="left: 52%; top: 22%"><svg class="pylon pylon--down"><use href="#p-down"/></svg><b>160042</b></div>
+          <div class="site" style="left: 68%; top: 50%"><svg class="pylon pylon--unknown"><use href="#p-unknown"/></svg><b>251087</b></div>
+          <div class="site" style="left: 84%; top: 28%"><svg class="pylon pylon--unsupervised"><use href="#p-unsupervised"/></svg><b>091203</b></div>
+
+          <aside class="panel" aria-labelledby="site-titre">
+            <h2 id="site-titre">Site 160042</h2>
+            <p class="muted">Alger · Bab Ezzouar</p>
+            <p><span class="badge badge--down"><svg class="pylon"><use href="#p-down"/></svg>Hors service</span></p>
+            <dl>
+              <dt>Depuis</dt><dd>14:02</dd>
+              <dt>Motif</dt><dd>3 éléments sur 3 hors service</dd>
+              <dt>Alarmes actives</dt><dd>2</dd>
+              <dt>Données observées</dt><dd>14:31</dd>
+            </dl>
+            <table>
+              <thead><tr><th>Élément</th><th>Techno</th><th>État</th></tr></thead>
+              <tbody>
+                <tr><td>160042-2G</td><td>2G</td><td>Hors service</td></tr>
+                <tr><td>160042-3G</td><td>3G</td><td>Hors service</td></tr>
+                <tr><td>160042-4G</td><td>4G</td><td>Hors service</td></tr>
+              </tbody>
+            </table>
+            <p style="display:flex; gap: var(--s-2); margin-top: var(--s-4)">
+              <button class="btn" type="button">Acquitter</button>
+              <button class="btn btn--quiet" type="button">Voir l'historique</button>
+            </p>
+          </aside>
+
+          <div class="legend" aria-label="Légende">
+            <div><svg class="pylon pylon--up"><use href="#p-up"/></svg>Stable</div>
+            <div><svg class="pylon pylon--degraded"><use href="#p-degraded"/></svg>Dégradé</div>
+            <div><svg class="pylon pylon--down"><use href="#p-down"/></svg>Hors service</div>
+            <div><svg class="pylon pylon--unknown"><use href="#p-unknown"/></svg>Inconnu : données manquantes, pas une panne</div>
+            <div><svg class="pylon pylon--unsupervised"><use href="#p-unsupervised"/></svg>Non supervisé</div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+</body>
+</html>
