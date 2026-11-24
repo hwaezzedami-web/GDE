@@ -153,17 +153,18 @@ public class Scheduler {
             }
         }
         for (JSONObject o : Data.items(Data.list(c, Data.OCCASIONS))) {
-            occasionNotice(c, 20000 + o.optInt("id"), o.optString("emoji", "🎉"), o.optString("title"),
+            occasionNotice(c, 20001 + (int) Math.abs(o.optLong("id") % 9000), o.optString("emoji", "🎉"), o.optString("title"),
                     Data.daysUntil(o.optInt("m"), o.optInt("d")));
         }
         if (Data.p(c).getBoolean(Data.DAILY_PHRASE, true)) {
-            simple(c, 19999, "💌 رسالة اليوم لبشرى", Data.phraseOfDay() + "\nقلها لها أو أرسلها الآن 💕");
+            simple(c, 19999, Data.g(c, "💌 رسالة اليوم لبشرى", "💌 رسالة اليوم لزوجك"),
+                    Data.phraseOfDay(c) + Data.g(c, "\nقلها لها أو أرسلها الآن 💕", "\nقوليها له أو أرسليها الآن 💕"));
         }
     }
 
     private static void occasionNotice(Context c, int id, String emoji, String title, int days) {
-        if (days == 0) simple(c, id, emoji + " اليوم: " + title + "! 🎉", "لا تنسَ تهنئة بشرى وتحضير مفاجأة 💝");
-        else if (days == 1) simple(c, id, emoji + " غداً: " + title, "حضّر الهدية والمفاجأة من الآن 🎁");
+        if (days == 0) simple(c, id, emoji + " اليوم: " + title + "! 🎉", Data.g(c, "لا تنسَ تهنئة بشرى وتحضير مفاجأة 💝", "لا تنسَي التهنئة وتحضير مفاجأة 💝"));
+        else if (days == 1) simple(c, id, emoji + " غداً: " + title, Data.g(c, "حضّر الهدية والمفاجأة من الآن 🎁", "حضّري الهدية والمفاجأة من الآن 🎁"));
         else if (days == 7) simple(c, id, emoji + " بعد أسبوع: " + title, "وقت التفكير في هدية ومفاجأة جميلة 💡");
     }
 

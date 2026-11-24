@@ -17,7 +17,7 @@ import org.json.JSONObject;
 import java.util.List;
 
 /** "كوبونات الحب": gift coupons Bouchra can redeem any time. */
-public class CouponsTab {
+public class CouponsTab implements Tab {
 
     private final MainActivity a;
     private final Ui ui;
@@ -48,13 +48,13 @@ public class CouponsTab {
     }
 
     private JSONArray load() {
-        if (!Data.has(a, Data.COUPONS)) {
+        if (!Data.has(a, Data.COUPONS) && !Cloud.linked(a)) {
             JSONArray arr = new JSONArray();
             for (int i = 0; i < DEFAULTS.length; i++) {
                 arr.put(Data.obj("id", i + 1, "emoji", DEFAULTS[i][0], "title", DEFAULTS[i][1],
                         "used", false, "usedDate", 0L));
             }
-            Data.save(a, Data.COUPONS, arr);
+            Data.saveLocal(a, Data.COUPONS, arr);
             return arr;
         }
         return Data.list(a, Data.COUPONS);
@@ -73,13 +73,20 @@ public class CouponsTab {
         return ui.page(body, fab);
     }
 
+    public void refresh() {
+        fill();
+    }
+
+    public void hide() {
+    }
+
     private void fill() {
         body.removeAllViews();
         List<JSONObject> items = Data.items(load());
         int active = 0;
         for (JSONObject o : items) if (!o.optBoolean("used")) active++;
 
-        TextView intro = ui.text("🎟️ كوبونات الحب\nهدايا لبشرى تستعملها متى شاءت، وعلى الزوج التنفيذ 😄", 14,
+        TextView intro = ui.text(Data.g(a, "🎟️ كوبونات الحب\nهدايا لبشرى تستعملها متى شاءت، وعليك التنفيذ 😄", "🎟️ كوبونات الحب\nهدايا من زوجك، استعمليها متى شئتِ وعليه التنفيذ 😄"), 14,
                 Ui.PINK_DARK, true);
         intro.setGravity(Gravity.CENTER);
         intro.setBackground(ui.rounded(Ui.PINK_SOFT, 16));
@@ -156,10 +163,10 @@ public class CouponsTab {
                             public void onClick(DialogInterface d, int which) {
                                 JSONArray arr = load();
                                 if (used && which == 0) {
-                                    JSONObject cur = Data.find(arr, o.optInt("id"));
+                                    JSONObject cur = Data.find(arr, o.optLong("id"));
                                     if (cur != null) Data.put(cur, "used", false);
                                 } else {
-                                    Data.remove(arr, o.optInt("id"));
+                                    Data.remove(arr, o.optLong("id"));
                                 }
                                 Data.save(a, Data.COUPONS, arr);
                                 fill();
@@ -179,12 +186,15 @@ public class CouponsTab {
                     @Override
                     public void onClick(DialogInterface d, int w) {
                         JSONArray arr = load();
-                        JSONObject cur = Data.find(arr, o.optInt("id"));
+                        JSONObject cur = Data.find(arr, o.optLong("id"));
                         if (cur == null) return;
                         Data.put(cur, "used", true);
                         Data.put(cur, "usedDate", System.currentTimeMillis());
                         Data.save(a, Data.COUPONS, arr);
-                        ui.toast("🎉 تم! على زوجك التنفيذ الآن 😄");
+                        ui.toast(Data.g(a, "🎉 تم! نفّذ الآن 😄", "🎉 تم! أرسلت له، وعليه التنفيذ الآن 😄"));
+                        Cloud.notifyPartner(a, "coupon", "🎟️ " + Cloud.myName(a),
+                                Data.g(a, "استعمل كوبون: ", "استعملت كوبون: ") + cur.optString("emoji") + " "
+                                        + cur.optString("title") + Data.g(a, "", " — نفّذ الآن 😄"));
                         fill();
                     }
                 })

@@ -1,0 +1,30 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "codes": {
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && ((!data.exists() && newData.child('owner').val() === auth.uid && root.child('couples').child(newData.child('couple').val() + '').child('members').child(auth.uid).exists()) || (data.exists() && newData.exists() && data.child('owner').val() === auth.uid) || (data.exists() && !newData.exists() && newData.parent().parent().child('couples').child(data.child('couple').val() + '').child('members').child(auth.uid).exists()))"
+      }
+    },
+    "couples": {
+      "$cid": {
+        ".read": "auth != null && data.child('members').child(auth.uid).exists()",
+        ".write": "auth != null && data.child('members').child(auth.uid).exists()",
+        "members": {
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid && newData.val() === true && (!data.parent().exists() || (!data.parent().parent().child('full').exists() && newData.parent().parent().child('full').val() === true && root.child('users').child(auth.uid).child('joinCode').exists() && root.child('codes').child(root.child('users').child(auth.uid).child('joinCode').val() + '').child('couple').val() === $cid && !newData.parent().parent().parent().parent().child('codes').child(root.child('users').child(auth.uid).child('joinCode').val() + '').exists()))"
+          }
+        },
+        "full": {
+          ".write": "auth != null && newData.val() === true && newData.parent().child('members').child(auth.uid).exists()"
+        }
+      }
+    }
+  }
+}

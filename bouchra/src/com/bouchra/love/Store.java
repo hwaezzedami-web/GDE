@@ -62,6 +62,31 @@ public class Store {
         {"💌", "اكتب لها رسالة بخط يدك", "اكتب لبشرى رسالة حب بخط يدك 💌", 10080},
     };
 
+    // Bouchra's own reminders (about her husband)
+    private static final Object[][] DEFAULTS_WIFE = {
+        {"💋", "قبّليه", "حان وقت قبلة لزوجك 💋", 120},
+        {"🤗", "احضنيه", "حضن دافئ لزوجك الآن 🤗", 180},
+        {"❤️", "قولي له: أحبك", "قولي لزوجك «أحبك» من قلبك ❤️", 240},
+        {"😊", "ابتسمي له", "ابتسامتك تسعده، ابتسمي له 😊", 180},
+        {"👀", "انظري في عينيه", "انظري في عيني زوجك وابتسمي 😍", 240},
+        {"🌹", "امدحيه", "قولي لزوجك كلمة جميلة عنه 🌹", 300},
+        {"📱", "أرسلي له رسالة حب", "أرسلي رسالة حب لزوجك الآن 💌", 180},
+        {"📞", "اتصلي واسألي عنه", "اتصلي بزوجك واسألي عن يومه 📞", 360},
+        {"😂", "أضحكيه", "أضحكي زوجك بموقف لطيف 😂", 240},
+        {"🙌", "اشكريه على تعبه", "اشكري زوجك على تعبه من أجلكم 🙏", 480},
+        {"👂", "استمعي ليومه", "اسأليه عن يومه واستمعي له 👂", 480},
+        {"🤲", "ادعي له", "ادعي لزوجك بالخير والتوفيق 🤲", 360},
+        {"💧", "ذكّريه يشرب ماء", "ذكّري زوجك يشرب كوب ماء 💧", 120},
+        {"☀️", "صباح الخير يا حبيبي", "قولي لزوجك: صباح الخير يا أغلى الناس ☀️", 1440},
+        {"🌙", "تصبح على خير", "قولي لزوجك: تصبح على خير يا عمري 🌙", 1440},
+        {"☕", "حضّري له قهوته", "حضّري لزوجك مشروبه المفضل ☕", 1440},
+        {"🍰", "حلوى يحبها", "فاجئي زوجك بحلوى يحبها 🍰", 4320},
+        {"📸", "صورة معه", "التقطي صورة جميلة معه 📸", 4320},
+        {"🎁", "مفاجأة صغيرة", "فاجئي زوجك بهدية صغيرة 🎁", 10080},
+        {"🎬", "سهرة معاً", "اقترحي سهرة فيلم معاً 🍿", 10080},
+        {"💌", "رسالة بخط يدك", "اكتبي لزوجك رسالة حب بخط يدك 💌", 10080},
+    };
+
     private static SharedPreferences prefs(Context c) {
         return c.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
@@ -75,6 +100,7 @@ public class Store {
         String raw = prefs(c).getString(KEY, null);
         if (raw == null) {
             long now = System.currentTimeMillis();
+            Object[][] DEFAULTS = Data.isWife(c) ? DEFAULTS_WIFE : Store.DEFAULTS;
             for (int i = 0; i < DEFAULTS.length; i++) {
                 Reminder r = new Reminder();
                 r.id = i + 1;
@@ -157,6 +183,13 @@ public class Store {
         r.today++;
         r.total++;
         r.next = adjustForQuiet(c, System.currentTimeMillis() + r.interval * 60000L);
+    }
+
+    /** Lets the partner know a reminder was done (setting "tell_partner", on by default). */
+    public static void tellPartner(Context c, Reminder r) {
+        if (!prefs(c).getBoolean("tell_partner", true)) return;
+        Cloud.notifyPartner(c, "done", r.emoji + " " + Cloud.myName(c),
+                Data.g(c, "أنجز من أجلك: ", "أنجزت من أجلك: ") + r.title + " 💕");
     }
 
     // ---- quiet (sleep) hours ----

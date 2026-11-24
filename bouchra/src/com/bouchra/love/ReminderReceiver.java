@@ -20,6 +20,7 @@ public class ReminderReceiver extends BroadcastReceiver {
                 || "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
             Scheduler.scheduleAll(c);
             Scheduler.scheduleDaily(c);
+            LoveService.start(c);
             return;
         }
         if (Scheduler.ACTION_DAILY.equals(action)) {
@@ -40,7 +41,8 @@ public class ReminderReceiver extends BroadcastReceiver {
         } else if (Scheduler.ACTION_DONE.equals(action)) {
             Store.markDone(c, r);
             Scheduler.dismiss(c, r.id);
-            Toast.makeText(c, MainActivity.randomPraise(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(c, MainActivity.randomPraise(c), Toast.LENGTH_SHORT).show();
+            Store.tellPartner(c, r);
         } else if (Scheduler.ACTION_SNOOZE.equals(action)) {
             r.next = System.currentTimeMillis() + 15 * 60000L;
             Scheduler.dismiss(c, r.id);

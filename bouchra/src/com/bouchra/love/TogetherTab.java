@@ -26,7 +26,7 @@ import java.util.Comparator;
 import java.util.List;
 
 /** "معاً": days together counter, love jar, and our occasions. */
-public class TogetherTab {
+public class TogetherTab implements Tab {
 
     private final MainActivity a;
     private final Ui ui;
@@ -34,7 +34,7 @@ public class TogetherTab {
 
     private static final String[][] OCCASION_TYPES = {
             {"🎂", "عيد ميلاد بشرى"},
-            {"🎂", "عيد ميلادي"},
+            {"🎂", "عيد ميلاد الزوج"},
             {"💞", "أول لقاء"},
             {"💐", "خطوبتنا"},
             {"🎉", "مناسبة أخرى..."},
@@ -49,6 +49,13 @@ public class TogetherTab {
         body = ui.column();
         fill();
         return ui.page(body, null);
+    }
+
+    public void refresh() {
+        fill();
+    }
+
+    public void hide() {
     }
 
     private void fill() {
@@ -76,7 +83,7 @@ public class TogetherTab {
             }
         });
         if (occ.isEmpty()) {
-            TextView t = ui.text("أضف عيد ميلادها وأول لقاء بينكما، وسأذكّرك قبلها بأسبوع وبيوم 🎁", 13, Ui.PINK_GRAY, false);
+            TextView t = ui.text(Data.g(a, "أضف عيد ميلادها وأول لقاء بينكما، وسأذكّرك قبلها بأسبوع وبيوم 🎁", "أضيفي عيد ميلاده وأول لقاء بينكما، وسأذكّرك قبلها بأسبوع وبيوم 🎁"), 13, Ui.PINK_GRAY, false);
             t.setPadding(ui.dp(8), ui.dp(4), ui.dp(8), ui.dp(4));
             body.addView(t);
         }
@@ -179,7 +186,7 @@ public class TogetherTab {
             public void onDateSet(DatePicker v, int y, int m, int d) {
                 Calendar s = Data.today();
                 s.set(y, m, d);
-                Data.p(a).edit().putLong(Data.SINCE, s.getTimeInMillis()).commit();
+                Sync.setSince(a, s.getTimeInMillis());
                 fill();
             }
         }, c.get(Calendar.YEAR), c.get(Calendar.MONTH), c.get(Calendar.DAY_OF_MONTH));
@@ -195,10 +202,10 @@ public class TogetherTab {
         c.setGravity(Gravity.CENTER_HORIZONTAL);
         TextView title = ui.text("🫙 جرّة الحب", 18, Ui.PINK_DARK, true);
         c.addView(title);
-        TextView hint = ui.text("رسالة اليوم — قلها لبشرى أو أرسلها لها", 12, Ui.PINK_GRAY, false);
+        TextView hint = ui.text(Data.g(a, "رسالة اليوم — قلها لبشرى أو أرسلها لها", "رسالة اليوم — قوليها لزوجك أو أرسليها له"), 12, Ui.PINK_GRAY, false);
         c.addView(hint);
 
-        final TextView phrase = ui.text(Data.phraseOfDay(), 19, Ui.PINK, true);
+        final TextView phrase = ui.text(Data.phraseOfDay(a), 19, Ui.PINK, true);
         phrase.setGravity(Gravity.CENTER);
         phrase.setBackground(ui.rounded(Ui.PINK_SOFT, 16));
         phrase.setPadding(ui.dp(14), ui.dp(16), ui.dp(14), ui.dp(16));
@@ -210,8 +217,8 @@ public class TogetherTab {
         draw.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String p = Data.randomPhrase();
-                while (p.contentEquals(phrase.getText())) p = Data.randomPhrase();
+                String p = Data.randomPhrase(a);
+                while (p.contentEquals(phrase.getText())) p = Data.randomPhrase(a);
                 phrase.setText(p);
                 phrase.setScaleX(0.6f);
                 phrase.setScaleY(0.6f);
@@ -221,7 +228,7 @@ public class TogetherTab {
             }
         });
         btns.addView(draw);
-        Button send = ui.softButton("📤 أرسلها لها");
+        Button send = ui.softButton(Data.g(a, "📤 أرسلها لها", "📤 أرسليها له"));
         send.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -283,7 +290,7 @@ public class TogetherTab {
                             @Override
                             public void onClick(DialogInterface d, int w) {
                                 JSONArray arr = Data.list(a, Data.OCCASIONS);
-                                Data.remove(arr, o.optInt("id"));
+                                Data.remove(arr, o.optLong("id"));
                                 Data.save(a, Data.OCCASIONS, arr);
                                 fill();
                             }

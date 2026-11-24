@@ -46,8 +46,21 @@ public class MainActivity extends Activity {
         "استمر هكذا يا حبيب بشرى 💗",
     };
 
+    private static final String[] PRAISE_WIFE = {
+        "أحسنتِ يا ملكة ❤️",
+        "زوجك محظوظ بكِ 💕",
+        "ما أجمل حبكما 🥰",
+        "زوجة رائعة! 🌹",
+        "الحب يكبر كل يوم 💖",
+    };
+
     public static String randomPraise() {
         return PRAISE[new Random().nextInt(PRAISE.length)];
+    }
+
+    public static String randomPraise(android.content.Context c) {
+        String[] p = Data.isWife(c) ? PRAISE_WIFE : PRAISE;
+        return p[new Random().nextInt(p.length)];
     }
 
     private LinearLayout listBox;
@@ -72,12 +85,27 @@ public class MainActivity extends Activity {
         return g;
     }
 
-    private static final String[][] TABS = {
-            {"⏰", "التذكيرات", "تذكيرات الحب لأجمل زوجة 🌸"},
-            {"💑", "معاً", "أيامنا ومناسباتنا 💕"},
-            {"🛒", "المشتريات", "جيب معاك... 🛍️"},
-            {"✨", "أحلامنا", "ما نحلم أن نحققه معاً 🌟"},
-            {"🎟️", "الكوبونات", "هدايا صغيرة لبشرى 🎁"},
+    public static final int TAB_REMINDERS = 0, TAB_CHAT = 1, TAB_TOGETHER = 2, TAB_SHOP = 3, TAB_DREAMS = 4, TAB_COUPONS = 5;
+
+    private String[][] tabs() {
+        return new String[][]{
+                {"⏰", "التذكيرات", Data.g(this, "تذكيرات الحب لأجمل زوجة 🌸", "تذكيرات الحب لأجمل زوج 🌸")},
+                {"💬", "الدردشة", "بيننا فقط 💕"},
+                {"💑", "معاً", "أيامنا ومناسباتنا 💕"},
+                {"🛒", "المشتريات", "جيب معاك... 🛍️"},
+                {"✨", "أحلامنا", "ما نحلم أن نحققه معاً 🌟"},
+                {"🎟️", "الكوبونات", Data.g(this, "هدايا صغيرة لبشرى 🎁", "هدايا صغيرة من زوجك 🎁")},
+        };
+    }
+
+    private String[][] TABS;
+    private Tab current;
+    private boolean paused;
+    private final android.content.BroadcastReceiver sharedReceiver = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(android.content.Context c, android.content.Intent i) {
+            if (current != null && !(current instanceof ChatTab)) current.refresh();
+        }
     };
 
     private Ui ui;
@@ -94,10 +122,79 @@ public class MainActivity extends Activity {
         getWindow().setStatusBarColor(PINK_DARK);
         getWindow().setNavigationBarColor(Color.WHITE);
 
+        getWindow().setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
+
         // Creating the channel while visible triggers the Android 13+ notification permission prompt.
         Scheduler.createChannel(this);
+        LoveService.channels(this);
+        registerReceiver(sharedReceiver, new android.content.IntentFilter(Sync.ACTION_SHARED));
+
+        if (!Data.hasRole(this)) {
+            setContentView(welcome());
+            return;
+        }
+        buildMain();
+    }
+
+    @Override
+    protected void onDestroy() {
+        try {
+            unregisterReceiver(sharedReceiver);
+        } catch (Exception ignored) {
+        }
+        if (current != null) current.hide();
+        super.onDestroy();
+    }
+
+    @Override
+    protected void onNewIntent(android.content.Intent intent) {
+        super.onNewIntent(intent);
+        int t = intent.getIntExtra("tab", -1);
+        if (t >= 0 && content != null) showTab(t);
+    }
+
+    /** First launch: who is using this phone? */
+    private View welcome() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(dp(28), dp(28), dp(28), dp(28));
+        GradientDrawable g = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{PINK_DARK, PINK, PINK_LIGHT});
+        box.setBackground(g);
+        box.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        TextView t = ui.text("💕 بشرى 💕", 38, Color.WHITE, true);
+        t.setGravity(Gravity.CENTER);
+        box.addView(t);
+        TextView q = ui.text("مرحباً! من يستعمل هذا الهاتف؟", 18, 0xFFFFE4EF, false);
+        q.setGravity(Gravity.CENTER);
+        q.setPadding(0, dp(10), 0, dp(26));
+        box.addView(q);
+        String[][] roles = {{"husband", "🤵  أنا الزوج"}, {"wife", "👰  أنا الزوجة (بشرى)"}};
+        for (final String[] r : roles) {
+            Button b = ui.button(r[1], Color.WHITE, PINK_DARK);
+            b.setTextSize(19);
+            b.setBackground(rounded(Color.WHITE, 30));
+            b.setPadding(dp(20), dp(14), dp(20), dp(14));
+            b.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Data.p(MainActivity.this).edit().putString("role", r[0]).commit();
+                    buildMain();
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.setMargins(0, dp(8), 0, dp(8));
+            box.addView(b, lp);
+        }
+        return box;
+    }
+
+    private void buildMain() {
+        TABS = tabs();
         Scheduler.scheduleAll(this);
         Scheduler.scheduleDaily(this);
+        LoveService.start(this);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
@@ -128,7 +225,23 @@ public class MainActivity extends Activity {
         subtitle.setTextSize(14);
         subtitle.setGravity(Gravity.CENTER);
         header.addView(subtitle);
-        root.addView(header, new LinearLayout.LayoutParams(-1, -2));
+        FrameLayout headerFrame = new FrameLayout(this);
+        headerFrame.addView(header, new FrameLayout.LayoutParams(-1, -2));
+        TextView acc = ui.text("👤", 20, Color.WHITE, false);
+        acc.setGravity(Gravity.CENTER);
+        acc.setBackground(rounded(0x33FFFFFF, 20));
+        acc.setElevation(dp(7));
+        acc.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showAccount();
+            }
+        });
+        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(dp(40), dp(40));
+        alp.gravity = Gravity.TOP | Gravity.LEFT;
+        alp.setMargins(dp(12), dp(12), 0, 0);
+        headerFrame.addView(acc, alp);
+        root.addView(headerFrame, new LinearLayout.LayoutParams(-1, -2));
 
         content = new FrameLayout(this);
         root.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
@@ -142,8 +255,72 @@ public class MainActivity extends Activity {
         root.addView(nav, new LinearLayout.LayoutParams(-1, -2));
 
         setContentView(root);
-        tab = Data.p(this).getInt("tab", 0);
+        tab = getIntent().getIntExtra("tab", Data.p(this).getInt("tab", 0));
         showTab(tab);
+    }
+
+    private void showAccount() {
+        LinearLayout box = ui.dialogBox();
+        box.setPadding(dp(22), dp(14), dp(22), dp(4));
+        String who;
+        if (!Cloud.signedIn(this)) who = "لم تسجّل الدخول بعد.\nافتح «الدردشة» لإنشاء حسابك وربطه بشريكك 💞";
+        else who = "👤 " + Cloud.myName(this) + "\n📧 " + Cloud.email(this) + "\n"
+                + (Cloud.linked(this) && !Cloud.partnerUid(this).isEmpty()
+                ? "💞 مرتبط مع: " + Cloud.partnerName(this) : "💞 لم يتم الربط بعد");
+        box.addView(ui.text(who, 15, PINK_DARK, false));
+        box.addView(ui.text(Data.isWife(this) ? "👰 هذا هاتف الزوجة" : "🤵 هذا هاتف الزوج", 13, PINK_GRAY, false),
+                ui.margins(-2, -2, 0, 8, 0, 0));
+
+        Switch tell = new Switch(this);
+        tell.setText("أخبر شريكي عندما أضغط «تم ✓» على تذكير");
+        tell.setTextColor(PINK_DARK);
+        tell.setTextSize(13);
+        tell.setChecked(Data.p(this).getBoolean("tell_partner", true));
+        tell.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton b, boolean on) {
+                Data.p(MainActivity.this).edit().putBoolean("tell_partner", on).commit();
+            }
+        });
+        box.addView(tell, ui.margins(-1, -2, 0, 14, 0, 0));
+
+        Button battery = ui.softButton("🔋 السماح بالعمل في الخلفية (لوصول الإشعارات)");
+        battery.setTextSize(12);
+        battery.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    android.content.Intent i = new android.content.Intent(
+                            android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS);
+                    i.setData(android.net.Uri.parse("package:" + getPackageName()));
+                    startActivity(i);
+                } catch (Exception e) {
+                    ui.toast("افتح إعدادات البطارية واختر «غير مقيّد» لتطبيق Bouchra");
+                }
+            }
+        });
+        box.addView(battery, ui.margins(-1, -2, 0, 12, 0, 0));
+
+        AlertDialog.Builder b = new AlertDialog.Builder(this).setTitle("الحساب").setView(box)
+                .setPositiveButton("إغلاق", null);
+        if (Cloud.signedIn(this)) {
+            b.setNeutralButton("تسجيل الخروج", new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface d, int w) {
+                    new AlertDialog.Builder(MainActivity.this)
+                            .setMessage("تسجيل الخروج من هذا الهاتف؟ (تبقى بياناتك محفوظة في حسابك)")
+                            .setPositiveButton("خروج", new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface d2, int w2) {
+                                    Cloud.signOut(MainActivity.this);
+                                    showTab(tab);
+                                }
+                            })
+                            .setNegativeButton("إلغاء", null).show();
+                }
+            });
+        }
+        b.show();
     }
 
     private void drawNav() {
@@ -182,20 +359,23 @@ public class MainActivity extends Activity {
 
     private void showTab(int i) {
         if (i < 0 || i >= TABS.length) i = 0;
+        if (current != null) current.hide();
+        current = null;
         tab = i;
         Data.p(this).edit().putInt("tab", i).apply();
         subtitle.setText(TABS[i][2]);
         drawNav();
         content.removeAllViews();
         listBox = null;
-        View v;
         switch (i) {
-            case 1: v = new TogetherTab(this, ui).build(); break;
-            case 2: v = new ShoppingTab(this, ui).build(); break;
-            case 3: v = new DreamsTab(this, ui).build(); break;
-            case 4: v = new CouponsTab(this, ui).build(); break;
-            default: v = buildReminders(); break;
+            case TAB_CHAT: current = new ChatTab(this, ui); break;
+            case TAB_TOGETHER: current = new TogetherTab(this, ui); break;
+            case TAB_SHOP: current = new ShoppingTab(this, ui); break;
+            case TAB_DREAMS: current = new DreamsTab(this, ui); break;
+            case TAB_COUPONS: current = new CouponsTab(this, ui); break;
+            default: current = null; break;
         }
+        View v = current != null ? current.build() : buildReminders();
         content.addView(v, new FrameLayout.LayoutParams(-1, -1));
         if (i == 0) refresh();
     }
@@ -268,6 +448,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        if (paused && current instanceof ChatTab) showTab(TAB_CHAT); // reconnect live chat
+        paused = false;
         handler.removeCallbacks(ticker);
         handler.post(ticker);
     }
@@ -275,6 +457,8 @@ public class MainActivity extends Activity {
     @Override
     protected void onPause() {
         super.onPause();
+        paused = true;
+        if (current instanceof ChatTab) current.hide();
         handler.removeCallbacks(ticker);
     }
 
@@ -369,7 +553,8 @@ public class MainActivity extends Activity {
                 Store.save(MainActivity.this, list);
                 Scheduler.schedule(MainActivity.this, cur);
                 Scheduler.dismiss(MainActivity.this, cur.id);
-                Toast.makeText(MainActivity.this, randomPraise(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(MainActivity.this, randomPraise(MainActivity.this), Toast.LENGTH_SHORT).show();
+                Store.tellPartner(MainActivity.this, cur);
                 refresh();
             }
         });

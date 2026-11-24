@@ -15,8 +15,8 @@ import zipfile
 from PIL import Image, ImageDraw
 
 PACKAGE = "com.bouchra.love"
-VERSION_CODE = 2
-VERSION_NAME = "2.0"
+VERSION_CODE = 3
+VERSION_NAME = "3.0"
 MIN_SDK = 21
 TARGET_SDK = 28
 
@@ -177,7 +177,10 @@ def manifest():
     x.start("uses-sdk", [("minSdkVersion", "int", MIN_SDK), ("targetSdkVersion", "int", TARGET_SDK)])
     x.end("uses-sdk")
     for perm in ["android.permission.RECEIVE_BOOT_COMPLETED", "android.permission.VIBRATE",
-                 "android.permission.WAKE_LOCK", "android.permission.POST_NOTIFICATIONS"]:
+                 "android.permission.WAKE_LOCK", "android.permission.POST_NOTIFICATIONS",
+                 "android.permission.INTERNET", "android.permission.ACCESS_NETWORK_STATE",
+                 "android.permission.FOREGROUND_SERVICE",
+                 "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"]:
         x.start("uses-permission", [("name", "str", perm)])
         x.end("uses-permission")
     x.start("application", [("theme", "ref", THEME_MATERIAL_LIGHT_NOACTIONBAR), ("label", "str", "Bouchra"),
@@ -197,6 +200,8 @@ def manifest():
         x.start("action", [("name", "str", a)]); x.end("action")
     x.end("intent-filter")
     x.end("receiver")
+    x.start("service", [("name", "str", PACKAGE + ".LoveService"), ("exported", "bool", False)])
+    x.end("service")
     x.end("application")
     x.end("manifest")
     return x.build()

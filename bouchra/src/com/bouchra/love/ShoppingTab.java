@@ -20,7 +20,7 @@ import org.json.JSONObject;
 import java.util.List;
 
 /** Shopping list ("جيب معاك"), grouped by category, shareable on WhatsApp. */
-public class ShoppingTab {
+public class ShoppingTab implements Tab {
 
     private final MainActivity a;
     private final Ui ui;
@@ -135,6 +135,13 @@ public class ShoppingTab {
         return ui.page(body, null);
     }
 
+    public void refresh() {
+        if (listBox != null) fillList();
+    }
+
+    public void hide() {
+    }
+
     private void drawCategoryChips(final LinearLayout chips) {
         chips.removeAllViews();
         for (int i = 0; i < CATS.length; i++) {
@@ -165,6 +172,8 @@ public class ShoppingTab {
         arr.put(Data.obj("id", Data.nextId(arr), "text", text, "cat", cat, "bought", false));
         Data.save(a, Data.SHOPPING, arr);
         ui.toast("أُضيف: " + text);
+        Cloud.notifyPartner(a, "shop", "🛒 " + Cloud.myName(a),
+                Data.g(a, "أضاف إلى المشتريات: ", "أضافت إلى المشتريات: ") + text);
         fillList();
     }
 
@@ -204,10 +213,13 @@ public class ShoppingTab {
             @Override
             public void onClick(View v) {
                 JSONArray arr = Data.list(a, Data.SHOPPING);
-                JSONObject cur = Data.find(arr, o.optInt("id"));
+                JSONObject cur = Data.find(arr, o.optLong("id"));
                 if (cur == null) return;
-                Data.put(cur, "bought", !cur.optBoolean("bought"));
+                boolean nowBought = !cur.optBoolean("bought");
+                Data.put(cur, "bought", nowBought);
                 Data.save(a, Data.SHOPPING, arr);
+                if (nowBought) Cloud.notifyPartner(a, "shop", "🛒 " + Cloud.myName(a),
+                        Data.g(a, "اشترى: ", "اشترت: ") + cur.optString("text") + " ✅");
                 fillList();
             }
         });
@@ -215,7 +227,7 @@ public class ShoppingTab {
             @Override
             public boolean onLongClick(View v) {
                 JSONArray arr = Data.list(a, Data.SHOPPING);
-                Data.remove(arr, o.optInt("id"));
+                Data.remove(arr, o.optLong("id"));
                 Data.save(a, Data.SHOPPING, arr);
                 ui.toast("حُذف: " + o.optString("text"));
                 fillList();
@@ -243,7 +255,7 @@ public class ShoppingTab {
 
     private void shareList() {
         List<JSONObject> items = Data.items(Data.list(a, Data.SHOPPING));
-        StringBuilder sb = new StringBuilder("🛒 جيب معاك يا حبيبي 💕\n");
+        StringBuilder sb = new StringBuilder(Data.g(a, "🛒 قائمة المشتريات 💕\n", "🛒 جيب معاك يا حبيبي 💕\n"));
         int n = 0;
         for (int c = 0; c < CATS.length; c++) {
             boolean header = false;

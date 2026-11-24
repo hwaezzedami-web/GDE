@@ -18,7 +18,7 @@ import org.json.JSONObject;
 import java.util.List;
 
 /** "أحلامنا": dreams and goals, with an optional savings target. */
-public class DreamsTab {
+public class DreamsTab implements Tab {
 
     private final MainActivity a;
     private final Ui ui;
@@ -38,13 +38,13 @@ public class DreamsTab {
     }
 
     private JSONArray load() {
-        if (!Data.has(a, Data.DREAMS)) {
+        if (!Data.has(a, Data.DREAMS) && !Cloud.linked(a)) {
             JSONArray arr = new JSONArray();
             for (int i = 0; i < DEFAULTS.length; i++) {
                 arr.put(Data.obj("id", i + 1, "emoji", DEFAULTS[i][0], "title", DEFAULTS[i][1],
                         "target", DEFAULTS[i][2], "saved", 0L, "done", false, "doneDate", 0L));
             }
-            Data.save(a, Data.DREAMS, arr);
+            Data.saveLocal(a, Data.DREAMS, arr);
             return arr;
         }
         return Data.list(a, Data.DREAMS);
@@ -61,6 +61,13 @@ public class DreamsTab {
             }
         });
         return ui.page(body, fab);
+    }
+
+    public void refresh() {
+        fill();
+    }
+
+    public void hide() {
     }
 
     private void fill() {
@@ -130,7 +137,7 @@ public class DreamsTab {
                 money.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
-                        addMoney(o.optInt("id"));
+                        addMoney(o.optLong("id"));
                     }
                 });
                 btns.addView(money, ui.margins(-2, -2, 0, 0, 8, 0));
@@ -140,12 +147,14 @@ public class DreamsTab {
                 @Override
                 public void onClick(View v) {
                     JSONArray arr = load();
-                    JSONObject cur = Data.find(arr, o.optInt("id"));
+                    JSONObject cur = Data.find(arr, o.optLong("id"));
                     if (cur == null) return;
                     Data.put(cur, "done", true);
                     Data.put(cur, "doneDate", System.currentTimeMillis());
                     Data.save(a, Data.DREAMS, arr);
                     celebrate(cur.optString("title"));
+                    Cloud.notifyPartner(a, "dream", "🎉 " + Cloud.myName(a),
+                            "تحقق حلمنا: " + cur.optString("title") + " 💕");
                     fill();
                 }
             });
@@ -164,10 +173,10 @@ public class DreamsTab {
                             public void onClick(DialogInterface d, int which) {
                                 JSONArray arr = load();
                                 if (done && which == 0) {
-                                    JSONObject cur = Data.find(arr, o.optInt("id"));
+                                    JSONObject cur = Data.find(arr, o.optLong("id"));
                                     if (cur != null) Data.put(cur, "done", false);
                                 } else {
-                                    Data.remove(arr, o.optInt("id"));
+                                    Data.remove(arr, o.optLong("id"));
                                 }
                                 Data.save(a, Data.DREAMS, arr);
                                 fill();
@@ -186,7 +195,7 @@ public class DreamsTab {
                 .setPositiveButton("الحمد لله ❤️", null).show();
     }
 
-    private void addMoney(final int id) {
+    private void addMoney(final long id) {
         LinearLayout box = ui.dialogBox();
         final EditText amount = ui.input("المبلغ");
         amount.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_SIGNED);
@@ -211,6 +220,8 @@ public class DreamsTab {
                         Data.put(cur, "saved", saved);
                         Data.save(a, Data.DREAMS, arr);
                         if (saved >= cur.optLong("target") && v > 0) ui.toast("🎯 وصلتما للهدف! اضغطا «تحقق»");
+                        if (v > 0) Cloud.notifyPartner(a, "dream", "💰 " + Cloud.myName(a),
+                                Data.g(a, "أضاف ", "أضافت ") + Data.money(v) + " لحصالة: " + cur.optString("title"));
                         fill();
                     }
                 })

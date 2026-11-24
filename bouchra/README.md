@@ -17,3 +17,18 @@ Version 2 adds a bottom bar with 5 sections:
 ## Rebuild
 `build-tools/build.sh <android.jar> <dx.jar>` (needs a JDK, python3 + Pillow; jar sources are listed in the script).
 `build-tools/bouchra.keystore` signs the app. Keep it, because updates must be signed with the same key.
+
+Version 3 adds a 💬 chat tab and two linked accounts (husband and wife) through Firebase
+(Auth + Realtime Database over REST, no Google SDK). Setup steps, in Arabic: `SETUP-FIREBASE.md`.
+Security rules: `firebase/database.rules.json`.
+- Private chat with ✓/✓✓ read receipts, "typing…", online status, quick replies, a "💗 I miss you" button, and mood sharing.
+- Shopping, dreams, coupons, occasions and the wedding date are shared live between both phones.
+- Partner notifications (messages, miss you, items added or bought, coupons used, reminders done)
+  arrive through a small foreground service, even when the app is closed.
+- First launch asks "husband or wife" and adapts reminders and wording.
+
+### Tests
+`test/CloudTest.java` runs the app's real Cloud/Sync code as three phones (husband, wife, stranger)
+against the Firebase emulator (`firebase emulators:start --only auth,database` using the rules file).
+29 checks: invite and join, security (a stranger is locked out, max two people), live list sync,
+simultaneous edits, chat, read receipts, inbox notifications, token refresh, and sign-in restore.

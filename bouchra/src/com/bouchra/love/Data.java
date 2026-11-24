@@ -42,8 +42,33 @@ public class Data {
         }
     }
 
+    /** Saves a list; shared lists are also sent to the partner when linked. */
     public static void save(Context c, String key, JSONArray a) {
+        if (Sync.isShared(key) && Cloud.linked(c)) Sync.localChange(c, key, list(c, key), a);
+        saveLocal(c, key, a);
+    }
+
+    public static void saveLocal(Context c, String key, JSONArray a) {
         p(c).edit().putString(key, a.toString()).commit();
+    }
+
+    // ---------- who am I ----------
+
+    public static String role(Context c) {
+        return p(c).getString("role", "husband");
+    }
+
+    public static boolean hasRole(Context c) {
+        return p(c).contains("role");
+    }
+
+    public static boolean isWife(Context c) {
+        return "wife".equals(role(c));
+    }
+
+    /** Picks the husband's or the wife's wording. */
+    public static String g(Context c, String husband, String wife) {
+        return isWife(c) ? wife : husband;
     }
 
     public static List<JSONObject> items(JSONArray a) {
@@ -55,21 +80,26 @@ public class Data {
         return out;
     }
 
-    public static int nextId(JSONArray a) {
-        int max = 0;
-        for (JSONObject o : items(a)) max = Math.max(max, o.optInt("id"));
-        return max + 1;
+    /**
+     * New ids: milliseconds * 1000 + random, so they sort by creation time and two phones
+     * adding at the same moment practically never pick the same id.
+     */
+    public static long nextId(JSONArray a) {
+        long max = 0;
+        for (JSONObject o : items(a)) max = Math.max(max, o.optLong("id"));
+        long timeId = System.currentTimeMillis() * 1000L + new Random().nextInt(1000);
+        return Math.max(max + 1, timeId);
     }
 
-    public static JSONObject find(JSONArray a, int id) {
-        for (JSONObject o : items(a)) if (o.optInt("id") == id) return o;
+    public static JSONObject find(JSONArray a, long id) {
+        for (JSONObject o : items(a)) if (o.optLong("id") == id) return o;
         return null;
     }
 
-    public static void remove(JSONArray a, int id) {
+    public static void remove(JSONArray a, long id) {
         for (int i = 0; i < a.length(); i++) {
             JSONObject o = a.optJSONObject(i);
-            if (o != null && o.optInt("id") == id) {
+            if (o != null && o.optLong("id") == id) {
                 a.remove(i);
                 return;
             }
@@ -202,14 +232,54 @@ public class Data {
             "سأبقى أحبكِ حتى آخر نفس 💞",
     };
 
-    public static String phraseOfDay() {
-        Calendar c = Calendar.getInstance();
-        int idx = (c.get(Calendar.YEAR) * 366 + c.get(Calendar.DAY_OF_YEAR)) % PHRASES.length;
-        return PHRASES[idx];
+    /** Phrases for Bouchra to say to her husband. */
+    public static final String[] PHRASES_HIM = {
+            "أنت أجمل صدفة في حياتي 💕",
+            "كل يوم معك هو عيد ❤️",
+            "ابتسامتك تضيء يومي ☀️",
+            "أحبك أكثر مما تقوله الكلمات 💗",
+            "أنت سندي وأماني 🏡",
+            "لو عاد بي الزمن لاخترتك من جديد 💍",
+            "قلبي ينبض باسمك 💓",
+            "أنت نصفي الأجمل 🌹",
+            "معك عرفت معنى السعادة 😊",
+            "شكراً لأنك في حياتي 🙏",
+            "أنت حلمي الذي تحقق ✨",
+            "وجودك يكفيني عن العالم كله 🌍",
+            "كل شيء أجمل عندما تكون بجانبي 💞",
+            "أنت ملك قلبي 👑",
+            "أشتاق إليك حتى وأنت بجانبي 🥰",
+            "صوتك أجمل ما أسمع 🎶",
+            "أنت أغلى ما أملك 💎",
+            "الله يحفظك لي ويديمك نعمة في حياتي 🤲",
+            "حبك يكبر في قلبي كل يوم 🌱",
+            "معك أشعر بالأمان 🛡️",
+            "أنت رفيق دربي وأحلامي 🛤️",
+            "لا أتخيل حياتي بدونك 💘",
+            "أحب تفاصيلك الصغيرة كلها 🧸",
+            "أنت نعمة أحمد الله عليها كل يوم 🤍",
+            "قلبي ملكك للأبد ♾️",
+            "أجمل لحظاتي هي التي أقضيها معك ⏳",
+            "تعبك من أجلنا لا يُنسى، شكراً يا حبيبي 💪",
+            "أنت أحلى قرار في حياتي ✅",
+            "أحبك اليوم أكثر من الأمس وأقل من الغد 💗",
+            "سأبقى أحبك حتى آخر نفس 💞",
+    };
+
+    public static String[] phrases(Context c) {
+        return isWife(c) ? PHRASES_HIM : PHRASES;
     }
 
-    public static String randomPhrase() {
-        return PHRASES[new Random().nextInt(PHRASES.length)];
+    public static String phraseOfDay(Context ctx) {
+        String[] ph = phrases(ctx);
+        Calendar c = Calendar.getInstance();
+        int idx = (c.get(Calendar.YEAR) * 366 + c.get(Calendar.DAY_OF_YEAR)) % ph.length;
+        return ph[idx];
+    }
+
+    public static String randomPhrase(Context c) {
+        String[] ph = phrases(c);
+        return ph[new Random().nextInt(ph.length)];
     }
 
     /** Opens the share sheet (WhatsApp, SMS...) with the given text. */
