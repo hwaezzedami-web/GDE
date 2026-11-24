@@ -72,50 +72,137 @@ public class MainActivity extends Activity {
         return g;
     }
 
+    private static final String[][] TABS = {
+            {"⏰", "التذكيرات", "تذكيرات الحب لأجمل زوجة 🌸"},
+            {"💑", "معاً", "أيامنا ومناسباتنا 💕"},
+            {"🛒", "المشتريات", "جيب معاك... 🛍️"},
+            {"✨", "أحلامنا", "ما نحلم أن نحققه معاً 🌟"},
+            {"🎟️", "الكوبونات", "هدايا صغيرة لبشرى 🎁"},
+    };
+
+    private Ui ui;
+    private FrameLayout content;
+    private LinearLayout nav;
+    private TextView subtitle;
+    private int tab = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         setTheme(android.R.style.Theme_Material_Light_NoActionBar);
         super.onCreate(savedInstanceState);
+        ui = new Ui(this);
         getWindow().setStatusBarColor(PINK_DARK);
-        if (Build.VERSION.SDK_INT >= 21) getWindow().setNavigationBarColor(PINK_DARK);
+        getWindow().setNavigationBarColor(Color.WHITE);
 
         // Creating the channel while visible triggers the Android 13+ notification permission prompt.
         Scheduler.createChannel(this);
         Scheduler.scheduleAll(this);
-
-        FrameLayout frame = new FrameLayout(this);
-        frame.setBackgroundColor(PINK_BG);
-        frame.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        Scheduler.scheduleDaily(this);
 
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        frame.addView(root, new FrameLayout.LayoutParams(-1, -1));
+        root.setBackgroundColor(PINK_BG);
+        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
 
         // ---- header ----
         LinearLayout header = new LinearLayout(this);
         header.setOrientation(LinearLayout.VERTICAL);
         header.setGravity(Gravity.CENTER);
-        header.setPadding(dp(16), dp(22), dp(16), dp(18));
+        header.setPadding(dp(16), dp(14), dp(16), dp(14));
         GradientDrawable hg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
                 new int[]{PINK_DARK, PINK, PINK_LIGHT});
-        hg.setCornerRadii(new float[]{0, 0, 0, 0, dp(28), dp(28), dp(28), dp(28)});
+        hg.setCornerRadii(new float[]{0, 0, 0, 0, dp(26), dp(26), dp(26), dp(26)});
         header.setBackground(hg);
         header.setElevation(dp(6));
 
         TextView title = new TextView(this);
         title.setText("💕 بشرى 💕");
         title.setTextColor(Color.WHITE);
-        title.setTextSize(34);
+        title.setTextSize(28);
         title.setTypeface(Typeface.DEFAULT_BOLD);
         title.setGravity(Gravity.CENTER);
         header.addView(title);
 
-        TextView sub = new TextView(this);
-        sub.setText("تذكيرات الحب لأجمل زوجة 🌸");
-        sub.setTextColor(0xFFFFE4EF);
-        sub.setTextSize(15);
-        sub.setGravity(Gravity.CENTER);
-        header.addView(sub);
+        subtitle = new TextView(this);
+        subtitle.setTextColor(0xFFFFE4EF);
+        subtitle.setTextSize(14);
+        subtitle.setGravity(Gravity.CENTER);
+        header.addView(subtitle);
+        root.addView(header, new LinearLayout.LayoutParams(-1, -2));
+
+        content = new FrameLayout(this);
+        root.addView(content, new LinearLayout.LayoutParams(-1, 0, 1f));
+
+        // ---- bottom navigation ----
+        nav = new LinearLayout(this);
+        nav.setOrientation(LinearLayout.HORIZONTAL);
+        nav.setBackgroundColor(Color.WHITE);
+        nav.setElevation(dp(12));
+        nav.setPadding(dp(4), dp(6), dp(4), dp(6));
+        root.addView(nav, new LinearLayout.LayoutParams(-1, -2));
+
+        setContentView(root);
+        tab = Data.p(this).getInt("tab", 0);
+        showTab(tab);
+    }
+
+    private void drawNav() {
+        nav.removeAllViews();
+        for (int i = 0; i < TABS.length; i++) {
+            final int idx = i;
+            boolean sel = i == tab;
+            LinearLayout item = new LinearLayout(this);
+            item.setOrientation(LinearLayout.VERTICAL);
+            item.setGravity(Gravity.CENTER);
+            item.setPadding(0, dp(4), 0, dp(4));
+            if (sel) item.setBackground(rounded(PINK_SOFT, 16));
+            TextView e = new TextView(this);
+            e.setText(TABS[i][0]);
+            e.setTextSize(sel ? 22 : 19);
+            e.setGravity(Gravity.CENTER);
+            item.addView(e);
+            TextView l = new TextView(this);
+            l.setText(TABS[i][1]);
+            l.setTextSize(11);
+            l.setGravity(Gravity.CENTER);
+            l.setTextColor(sel ? PINK : PINK_GRAY);
+            if (sel) l.setTypeface(Typeface.DEFAULT_BOLD);
+            item.addView(l);
+            item.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    showTab(idx);
+                }
+            });
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+            lp.setMargins(dp(2), 0, dp(2), 0);
+            nav.addView(item, lp);
+        }
+    }
+
+    private void showTab(int i) {
+        if (i < 0 || i >= TABS.length) i = 0;
+        tab = i;
+        Data.p(this).edit().putInt("tab", i).apply();
+        subtitle.setText(TABS[i][2]);
+        drawNav();
+        content.removeAllViews();
+        listBox = null;
+        View v;
+        switch (i) {
+            case 1: v = new TogetherTab(this, ui).build(); break;
+            case 2: v = new ShoppingTab(this, ui).build(); break;
+            case 3: v = new DreamsTab(this, ui).build(); break;
+            case 4: v = new CouponsTab(this, ui).build(); break;
+            default: v = buildReminders(); break;
+        }
+        content.addView(v, new FrameLayout.LayoutParams(-1, -1));
+        if (i == 0) refresh();
+    }
+
+    private View buildReminders() {
+        LinearLayout col = new LinearLayout(this);
+        col.setOrientation(LinearLayout.VERTICAL);
 
         todayText = new TextView(this);
         todayText.setTextColor(PINK_DARK);
@@ -124,12 +211,11 @@ public class MainActivity extends Activity {
         todayText.setGravity(Gravity.CENTER);
         todayText.setPadding(dp(18), dp(6), dp(18), dp(6));
         todayText.setBackground(rounded(Color.WHITE, 20));
+        todayText.setElevation(dp(2));
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(-2, -2);
         tlp.topMargin = dp(12);
         tlp.gravity = Gravity.CENTER_HORIZONTAL;
-        header.addView(todayText, tlp);
-
-        root.addView(header, new LinearLayout.LayoutParams(-1, -2));
+        col.addView(todayText, tlp);
 
         // ---- quiet hours switch ----
         Switch quiet = new Switch(this);
@@ -151,8 +237,8 @@ public class MainActivity extends Activity {
             }
         });
         LinearLayout.LayoutParams qlp = new LinearLayout.LayoutParams(-1, -2);
-        qlp.setMargins(dp(14), dp(12), dp(14), dp(4));
-        root.addView(quiet, qlp);
+        qlp.setMargins(dp(14), dp(10), dp(14), dp(4));
+        col.addView(quiet, qlp);
 
         // ---- reminders list ----
         ScrollView scroll = new ScrollView(this);
@@ -160,30 +246,23 @@ public class MainActivity extends Activity {
         listBox.setOrientation(LinearLayout.VERTICAL);
         listBox.setPadding(dp(12), dp(6), dp(12), dp(90));
         scroll.addView(listBox);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+        col.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-        // ---- add button ----
-        Button add = new Button(this);
-        add.setText("➕  إضافة تذكير");
-        add.setTextColor(Color.WHITE);
-        add.setTextSize(16);
-        add.setTypeface(Typeface.DEFAULT_BOLD);
-        add.setAllCaps(false);
-        add.setBackground(rounded(PINK, 30));
+        FrameLayout frame = new FrameLayout(this);
+        frame.addView(col, new FrameLayout.LayoutParams(-1, -1));
+        Button add = ui.fab("➕  إضافة تذكير");
         add.setElevation(dp(8));
-        add.setPadding(dp(26), 0, dp(26), 0);
         add.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 showAddDialog();
             }
         });
-        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(-2, dp(54));
+        FrameLayout.LayoutParams alp = new FrameLayout.LayoutParams(-2, dp(52));
         alp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        alp.bottomMargin = dp(18);
+        alp.bottomMargin = dp(14);
         frame.addView(add, alp);
-
-        setContentView(frame);
+        return frame;
     }
 
     @Override
@@ -200,6 +279,7 @@ public class MainActivity extends Activity {
     }
 
     private void refresh() {
+        if (listBox == null || tab != 0) return;
         List<Store.Reminder> list = Store.load(this);
         int todayTotal = 0;
         for (Store.Reminder r : list) todayTotal += r.today;

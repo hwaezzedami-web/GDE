@@ -11,6 +11,9 @@ import android.media.AudioAttributes;
 import android.media.RingtoneManager;
 import android.os.Build;
 
+import org.json.JSONObject;
+
+import java.util.Calendar;
 import java.util.List;
 
 /** Schedules alarms and shows notifications. */
@@ -22,6 +25,7 @@ public class Scheduler {
     public static final String ACTION_ALARM = "com.bouchra.love.ALARM";
     public static final String ACTION_DONE = "com.bouchra.love.DONE";
     public static final String ACTION_SNOOZE = "com.bouchra.love.SNOOZE";
+    public static final String ACTION_DAILY = "com.bouchra.love.DAILY";
     public static final String EXTRA_ID = "id";
 
     private static int piFlags() {
@@ -115,5 +119,73 @@ public class Scheduler {
                     .setLights(PINK, 800, 1600);
         }
         ((NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE)).notify(r.id, b.build());
+    }
+    // ---------- daily 9:00 check: occasions + love message ----------
+
+    public static void scheduleDaily(Context c) {
+        Intent i = new Intent(c, ReminderReceiver.class);
+        i.setAction(ACTION_DAILY);
+        PendingIntent p = PendingIntent.getBroadcast(c, 999999, i, piFlags());
+        Calendar t = Calendar.getInstance();
+        t.set(Calendar.HOUR_OF_DAY, 9);
+        t.set(Calendar.MINUTE, 0);
+        t.set(Calendar.SECOND, 0);
+        t.set(Calendar.MILLISECOND, 0);
+        if (t.getTimeInMillis() <= System.currentTimeMillis()) t.add(Calendar.DAY_OF_YEAR, 1);
+        AlarmManager am = (AlarmManager) c.getSystemService(Context.ALARM_SERVICE);
+        if (Build.VERSION.SDK_INT >= 23) {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t.getTimeInMillis(), p);
+        } else {
+            am.setExact(AlarmManager.RTC_WAKEUP, t.getTimeInMillis(), p);
+        }
+    }
+
+    public static void runDaily(Context c) {
+        // wedding anniversary
+        long since = Data.p(c).getLong(Data.SINCE, 0);
+        if (since > 0) {
+            Calendar s = Calendar.getInstance();
+            s.setTimeInMillis(since);
+            int count = Data.nextYearCount(s.get(Calendar.YEAR), s.get(Calendar.MONTH), s.get(Calendar.DAY_OF_MONTH));
+            if (count > 0) {
+                occasionNotice(c, 20000, "💍", "ذكرى زواجكما " + Data.ordinal(count),
+                        Data.daysUntil(s.get(Calendar.MONTH), s.get(Calendar.DAY_OF_MONTH)));
+            }
+        }
+        for (JSONObject o : Data.items(Data.list(c, Data.OCCASIONS))) {
+            occasionNotice(c, 20000 + o.optInt("id"), o.optString("emoji", "🎉"), o.optString("title"),
+                    Data.daysUntil(o.optInt("m"), o.optInt("d")));
+        }
+        if (Data.p(c).getBoolean(Data.DAILY_PHRASE, true)) {
+            simple(c, 19999, "💌 رسالة اليوم لبشرى", Data.phraseOfDay() + "\nقلها لها أو أرسلها الآن 💕");
+        }
+    }
+
+    private static void occasionNotice(Context c, int id, String emoji, String title, int days) {
+        if (days == 0) simple(c, id, emoji + " اليوم: " + title + "! 🎉", "لا تنسَ تهنئة بشرى وتحضير مفاجأة 💝");
+        else if (days == 1) simple(c, id, emoji + " غداً: " + title, "حضّر الهدية والمفاجأة من الآن 🎁");
+        else if (days == 7) simple(c, id, emoji + " بعد أسبوع: " + title, "وقت التفكير في هدية ومفاجأة جميلة 💡");
+    }
+
+    @SuppressWarnings("deprecation")
+    public static void simple(Context c, int id, String title, String text) {
+        createChannel(c);
+        Intent open = new Intent(c, MainActivity.class);
+        open.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent contentPi = PendingIntent.getActivity(c, id, open, piFlags());
+        Notification.Builder b = Build.VERSION.SDK_INT >= 26
+                ? new Notification.Builder(c, CHANNEL)
+                : new Notification.Builder(c);
+        b.setSmallIcon(R.drawable.ic_notif)
+                .setContentTitle(title)
+                .setContentText(text)
+                .setStyle(new Notification.BigTextStyle().bigText(text))
+                .setColor(PINK)
+                .setAutoCancel(true)
+                .setContentIntent(contentPi);
+        if (Build.VERSION.SDK_INT < 26) {
+            b.setPriority(Notification.PRIORITY_HIGH).setDefaults(Notification.DEFAULT_ALL);
+        }
+        ((NotificationManager) c.getSystemService(Context.NOTIFICATION_SERVICE)).notify(id, b.build());
     }
 }

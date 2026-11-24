@@ -19,6 +19,12 @@ public class ReminderReceiver extends BroadcastReceiver {
                 || Intent.ACTION_MY_PACKAGE_REPLACED.equals(action)
                 || "android.intent.action.QUICKBOOT_POWERON".equals(action)) {
             Scheduler.scheduleAll(c);
+            Scheduler.scheduleDaily(c);
+            return;
+        }
+        if (Scheduler.ACTION_DAILY.equals(action)) {
+            Scheduler.runDaily(c);
+            Scheduler.scheduleDaily(c);
             return;
         }
 
