@@ -15,8 +15,8 @@ import zipfile
 from PIL import Image, ImageDraw
 
 PACKAGE = "com.bouchra.love"
-VERSION_CODE = 3
-VERSION_NAME = "3.0"
+VERSION_CODE = 4
+VERSION_NAME = "3.1"
 MIN_SDK = 21
 TARGET_SDK = 28
 

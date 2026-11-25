@@ -37,8 +37,8 @@ import java.util.concurrent.Executors;
 public class Cloud {
 
     /** Optional built-in config. Empty = entered inside the app (or pasted from an invite). */
-    static final String BUILTIN_KEY = "";
-    static final String BUILTIN_DB = "";
+    static final String BUILTIN_KEY = "AIzaSyAzWW4xn8TxTRpHmbQSJZiwmBN3b2S8XnI";
+    static final String BUILTIN_DB = "https://aboubakr-d4428-default-rtdb.firebaseio.com";
 
     public static final ExecutorService EX = Executors.newSingleThreadExecutor();
     private static Handler main;
