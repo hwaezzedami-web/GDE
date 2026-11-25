@@ -32,3 +32,15 @@ Security rules: `firebase/database.rules.json`.
 against the Firebase emulator (`firebase emulators:start --only auth,database` using the rules file).
 29 checks: invite and join, security (a stranger is locked out, max two people), live list sync,
 simultaneous edits, chat, read receipts, inbox notifications, token refresh, and sign-in restore.
+
+## iPhone web app (`/docs`, version 3.2)
+Bouchra's iPhone uses a web app (installable from Safari via "Add to Home Screen"), served by GitHub Pages
+from `/docs`: https://hwaezzedami-web.github.io/GDE/
+- It uses the same Firebase project, data format and invite codes as the Android app. The wife signs up and types the 6-digit code.
+- Chat, shopping, together, dreams, coupons, her own reminders (shown when due while open), mood and "miss you".
+- Notifications while closed: the web app stores a Web Push subscription and its own VAPID key at
+  `couples/{cid}/push/{uid}`. The Android app (`WebPush.java`) signs a VAPID JWT and sends an empty push.
+  The service worker then reads the inbox from Firebase and shows the notifications. No server is needed.
+- Test: `test/web-test.cjs` drives the web app in Chromium (iPhone viewport) as the wife, while `test/HusbandCli.java`
+  runs the Android code as the husband, both against the Firebase emulator. It makes 25 checks, including the
+  VAPID signature verified with WebCrypto.

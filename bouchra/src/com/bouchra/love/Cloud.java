@@ -367,10 +367,11 @@ public class Cloud {
             String b64 = android.util.Base64.encodeToString(payload.getBytes("UTF-8"),
                     android.util.Base64.NO_WRAP | android.util.Base64.URL_SAFE);
             String who = Data.isWife(c) ? "زوجتك" : "زوجك";
-            String text = "💌 دعوة من " + who + " " + myName(c) + " إلى تطبيق Bouchra 💕\n\n"
-                    + "1) افتح تطبيق Bouchra ← الدردشة 💬\n"
-                    + "2) اضغط «📥 لدي دعوة» والصق هذه الرسالة كاملة\n\n"
-                    + "رمز الربط: " + code + "\n"
+            String text = "💌 دعوة من " + who + " " + myName(c) + " إلى تطبيق بشرى 💕\n\n"
+                    + "📱 على الآيفون: افتحي هذا الرابط في Safari ثم أنشئي حسابك واكتبي رمز الربط:\n"
+                    + WebPush.SUBJECT + "\n\n"
+                    + "🤖 على أندرويد: تطبيق Bouchra ← الدردشة ← «📥 لدي دعوة» والصق هذه الرسالة\n\n"
+                    + "🔑 رمز الربط: " + code + "\n\n"
                     + "BOUCHRA:" + b64;
             p(c).edit().putString("my_invite", text).putString("my_invite_code", code).commit();
             return text;
@@ -445,11 +446,12 @@ public class Cloud {
     }
 
     /** Blocking: posts a notification into the partner's inbox. */
-    static void sendInbox(Context c, String kind, String title, String text) throws IOException {
+    public static void sendInbox(Context c, String kind, String title, String text) throws IOException {
         String pu = findPartner(c);
         if (pu.isEmpty()) return;
         post(c, "couples/" + cid(c) + "/inbox/" + pu,
                 Data.obj("kind", kind, "title", title, "text", text, "t", System.currentTimeMillis()));
+        WebPush.wake(c, pu); // partner on iPhone (web app): deliver it now
     }
 
     /** Fire-and-forget partner notification (no-op when not linked). */

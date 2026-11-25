@@ -1,0 +1,1192 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<title>بشرى 💕</title>
+<meta name="description" content="مساحتنا الخاصة: دردشة، مشتريات، أحلام وكوبونات">
+<meta name="theme-color" content="#AD1457">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="بشرى">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root {
+  --pink: #E91E63; --pink-light: #FF80AB; --pink-soft: #FCE4EC; --pink-bg: #FFF0F6;
+  --pink-dark: #AD1457; --gray: #9C6B80; --line: #F8BBD0; --muted: #F5EEF1; --muted-line: #E0D0D6;
+  --text: #3A2A30; --card: #FFFFFF;
+  --safe-t: env(safe-area-inset-top, 0px); --safe-b: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--pink-bg); color: var(--text);
+  font-family: -apple-system, "SF Arabic", "Geeza Pro", "Segoe UI", Tahoma, sans-serif;
+  font-size: 16px; overscroll-behavior: none;
+}
+button { font: inherit; cursor: pointer; border: 0; }
+input, textarea, select { font: inherit; font-size: 16px; color: var(--pink-dark); }
+#app { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+header {
+  position: relative; flex: none; text-align: center; color: #fff;
+  padding: calc(var(--safe-t) + 10px) 16px 12px;
+  background: linear-gradient(135deg, var(--pink-dark), var(--pink), var(--pink-light));
+  border-radius: 0 0 24px 24px; box-shadow: 0 4px 14px rgba(173, 20, 87, .25); z-index: 2;
+}
+header h1 { margin: 0; font-size: 26px; }
+header p { margin: 2px 0 0; font-size: 13px; color: #FFE4EF; }
+#accBtn {
+  position: absolute; left: 12px; top: calc(var(--safe-t) + 10px); width: 40px; height: 40px;
+  border-radius: 20px; background: rgba(255, 255, 255, .22); color: #fff; font-size: 20px;
+}
+main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 10px 12px 24px; }
+main.chatmode { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+nav {
+  flex: none; display: flex; background: #fff; box-shadow: 0 -4px 14px rgba(173, 20, 87, .10);
+  padding: 6px 4px calc(var(--safe-b) + 6px); z-index: 2;
+}
+nav button {
+  flex: 1; background: none; padding: 4px 0; border-radius: 14px; color: var(--gray);
+  display: flex; flex-direction: column; align-items: center; font-size: 10.5px; gap: 1px;
+}
+nav button .e { font-size: 20px; }
+nav button.on { background: var(--pink-soft); color: var(--pink); font-weight: 700; }
+
+.card {
+  background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 12px 14px;
+  margin: 8px 2px; box-shadow: 0 1px 3px rgba(173, 20, 87, .08);
+}
+.card.off { background: var(--muted); border-color: var(--muted-line); }
+.hero {
+  background: linear-gradient(135deg, var(--pink), var(--pink-light)); color: #fff; border: 0;
+  text-align: center; border-radius: 20px; padding: 16px;
+}
+.hero h2 { margin: 0 0 4px; font-size: 19px; }
+.hero .sub { color: #FFE4EF; font-size: 14px; }
+.hero .big { font-size: 23px; font-weight: 800; margin: 8px 0 4px; }
+.pill { display: inline-block; background: #fff; color: var(--pink-dark); font-weight: 700;
+  border-radius: 16px; padding: 6px 14px; margin-top: 10px; font-size: 14px; }
+h3.sec { color: var(--pink-dark); font-size: 17px; margin: 14px 6px 4px; display: flex; align-items: center; gap: 8px; }
+h3.sec .grow { flex: 1; }
+.muted { color: var(--gray); font-size: 13px; }
+.row { display: flex; align-items: center; gap: 10px; }
+.grow { flex: 1; min-width: 0; }
+.bubble-e {
+  width: 50px; height: 50px; border-radius: 25px; background: var(--pink-soft); flex: none;
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+}
+.title { font-weight: 700; color: var(--pink-dark); font-size: 16px; }
+.btn { background: var(--pink); color: #fff; font-weight: 700; border-radius: 22px; padding: 9px 16px; font-size: 14px; white-space: nowrap; }
+.btn.soft { background: var(--pink-soft); color: var(--pink-dark); }
+.btn.ghost { background: transparent; color: var(--gray); }
+.btn.white { background: #fff; color: var(--pink-dark); }
+.btn.block { display: block; width: 100%; margin-top: 10px; padding: 12px; font-size: 16px; }
+.btn:disabled { opacity: .5; }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 4px 0; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { background: var(--pink-soft); color: var(--pink-dark); border-radius: 16px; padding: 6px 12px; font-size: 13px; white-space: nowrap; flex: none; }
+.chip.on { background: var(--pink); color: #fff; }
+.chip.light { background: #FFF7FA; color: var(--pink); border: 1px solid var(--line); }
+.field {
+  width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 11px 14px; background: #fff;
+  margin-top: 8px; outline: none;
+}
+.field:focus { border-color: var(--pink); }
+.field.ltr { direction: ltr; text-align: left; }
+.bar { height: 12px; background: var(--pink-soft); border-radius: 6px; overflow: hidden; margin: 8px 0 4px; }
+.bar > div { height: 100%; background: linear-gradient(270deg, var(--pink-light), var(--pink)); border-radius: 6px; }
+.badge { background: var(--pink-light); color: #fff; border-radius: 14px; padding: 6px 10px; font-weight: 700; font-size: 13px; text-align: center; white-space: pre-line; }
+.badge.hot { background: var(--pink); }
+.x { background: none; color: var(--gray); font-size: 18px; padding: 4px 8px; }
+
+/* shopping */
+.item { display: flex; align-items: center; gap: 8px; padding: 9px 2px; border-top: 1px solid var(--pink-soft); font-size: 16px; color: var(--pink-dark); }
+.item:first-of-type { border-top: 0; }
+.item.done span.t { text-decoration: line-through; color: var(--gray); }
+
+/* coupons */
+.ticket {
+  display: flex; align-items: center; gap: 12px; padding: 14px; margin: 8px 2px; border-radius: 16px;
+  background: linear-gradient(270deg, var(--pink), var(--pink-light)); color: #fff;
+  border: 2px dashed rgba(255, 255, 255, .9); box-shadow: 0 2px 6px rgba(233, 30, 99, .25);
+}
+.ticket.used { background: var(--muted); color: var(--gray); border-color: var(--muted-line); box-shadow: none; }
+.ticket .e { font-size: 30px; }
+.ticket .t { font-weight: 700; font-size: 16px; }
+.ticket .s { font-size: 12px; opacity: .9; }
+
+/* chat */
+.chat-top { display: flex; align-items: center; gap: 10px; background: #fff; padding: 10px 14px; box-shadow: 0 2px 6px rgba(173, 20, 87, .08); }
+.chat-top .acts { display: flex; flex-direction: column; gap: 4px; }
+.chat-top .acts .btn { padding: 7px 12px; font-size: 13px; }
+#msgs { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 8px 10px; display: flex; flex-direction: column; }
+.day { align-self: center; background: var(--pink-soft); color: var(--gray); font-size: 11px; font-weight: 700; border-radius: 10px; padding: 3px 10px; margin: 8px 0 6px; }
+.msg { max-width: 76%; padding: 7px 12px 5px; border-radius: 18px; margin: 2px 0; white-space: pre-wrap; word-wrap: break-word; box-shadow: 0 1px 1px rgba(0, 0, 0, .05); }
+.msg .meta { font-size: 10px; text-align: left; margin-top: 2px; }
+.msg.them { align-self: flex-start; background: #fff; border: 1px solid var(--line); border-bottom-right-radius: 4px; }
+.msg.them .meta { color: var(--gray); }
+.msg.me { align-self: flex-end; background: var(--pink); color: #fff; border-bottom-left-radius: 4px; }
+.msg.me .meta { color: #FFE4EF; }
+.msg.miss { background: linear-gradient(135deg, var(--pink), #FF4081); color: #fff; font-size: 20px; font-weight: 700; border: 0; }
+.msg.miss .meta { color: #FFE4EF; }
+.empty { text-align: center; color: var(--gray); margin-top: 40px; }
+.quick { display: flex; gap: 6px; overflow-x: auto; padding: 4px 8px 2px; scrollbar-width: none; flex: none; }
+.quick::-webkit-scrollbar { display: none; }
+.quick button { background: #fff; color: var(--pink); border: 1px solid var(--line); border-radius: 16px; padding: 6px 12px; font-size: 13px; white-space: nowrap; flex: none; }
+.composer { display: flex; align-items: flex-end; gap: 8px; padding: 6px 8px 8px; flex: none; }
+.composer textarea { flex: 1; resize: none; border: 1px solid var(--line); border-radius: 22px; padding: 10px 16px; max-height: 110px; outline: none; background: #fff; color: var(--text); }
+.send { width: 46px; height: 46px; border-radius: 23px; background: var(--pink); color: #fff; font-size: 20px; flex: none; transform: scaleX(-1); }
+
+/* sheet + toast */
+#sheetBg { position: fixed; inset: 0; background: rgba(60, 10, 30, .35); display: none; z-index: 10; }
+#sheet {
+  position: fixed; left: 0; right: 0; bottom: 0; background: #fff; border-radius: 22px 22px 0 0; z-index: 11;
+  padding: 16px 18px calc(var(--safe-b) + 16px); max-height: 85dvh; overflow-y: auto; transform: translateY(110%); transition: transform .25s;
+}
+#sheet.open { transform: none; }
+#sheet h3 { margin: 0 0 8px; color: var(--pink-dark); }
+.opt { display: block; width: 100%; text-align: right; background: var(--pink-bg); color: var(--pink-dark); border-radius: 14px; padding: 12px 14px; margin-top: 6px; font-size: 16px; }
+#toast {
+  position: fixed; left: 50%; top: calc(var(--safe-t) + 14px); transform: translate(-50%, -150%); transition: transform .3s;
+  background: var(--pink-dark); color: #fff; border-radius: 18px; padding: 10px 18px; z-index: 20; max-width: 90vw; text-align: center;
+  box-shadow: 0 6px 20px rgba(173, 20, 87, .35); font-size: 15px;
+}
+#toast.show { transform: translate(-50%, 0); }
+.install { background: #fff; border: 2px dashed var(--pink-light); }
+.pop { animation: pop .38s cubic-bezier(.34, 1.56, .64, 1); }
+@keyframes pop { from { transform: scale(.6); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .pop { animation: none; } #sheet, #toast { transition: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <button id="accBtn" aria-label="الحساب">👤</button>
+    <h1>💕 بشرى 💕</h1>
+    <p id="subtitle">مساحتنا الخاصة</p>
+  </header>
+  <main id="main"></main>
+  <nav id="nav"></nav>
+</div>
+<div id="sheetBg"></div>
+<div id="sheet"></div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+// ====================================================================
+// configuration (same Firebase project as the Android app)
+// ====================================================================
+const CFG = {
+  key: 'AIzaSyAzWW4xn8TxTRpHmbQSJZiwmBN3b2S8XnI',
+  db: 'https://aboubakr-d4428-default-rtdb.firebaseio.com',
+  authBase: 'https://identitytoolkit.googleapis.com/v1/accounts:',
+  tokenBase: 'https://securetoken.googleapis.com/v1/token',
+  q: ''
+};
+// test hook: ?emu=127.0.0.1 talks to the local Firebase emulator
+(() => {
+  const emu = new URLSearchParams(location.search).get('emu');
+  if (!emu) return;
+  CFG.key = 'fake-api-key';
+  CFG.db = `http://${emu}:9000`;
+  CFG.authBase = `http://${emu}:9099/identitytoolkit.googleapis.com/v1/accounts:`;
+  CFG.tokenBase = `http://${emu}:9099/securetoken.googleapis.com/v1/token`;
+  CFG.q = '&ns=demo-bouchra-default-rtdb';
+})();
+
+// ====================================================================
+// local state
+// ====================================================================
+const LS = 'bouchra' + (CFG.q ? '-emu' : '');
+let S = {};
+try { S = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch (e) { S = {}; }
+function save() { try { localStorage.setItem(LS, JSON.stringify(S)); } catch (e) {} }
+
+const $ = (sel, root = document) => root.querySelector(sel);
+function el(tag, attrs = {}, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'html') e.innerHTML = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k.nodeType ? k : String(k));
+  return e;
+}
+const now = () => Date.now();
+const pad2 = n => String(n).padStart(2, '0');
+const hhmm = t => { const d = new Date(t); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+const ddmmyyyy = t => { const d = new Date(t); return pad2(d.getDate()) + '/' + pad2(d.getMonth() + 1) + '/' + d.getFullYear(); };
+const money = v => Number(v || 0).toLocaleString('en-US');
+function sameDay(a, b) { a = new Date(a); b = new Date(b); return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); }
+function whenText(t) {
+  if (sameDay(t, now())) return 'اليوم ' + hhmm(t);
+  if (sameDay(t, now() + 864e5)) return 'غداً ' + hhmm(t);
+  if (sameDay(t, now() - 864e5)) return 'أمس ' + hhmm(t);
+  return ddmmyyyy(t).slice(0, 5) + ' ' + hhmm(t);
+}
+function plural(n, one, two, few, many) {
+  if (n === 1) return one; if (n === 2) return two;
+  if (n >= 3 && n <= 10) return n + ' ' + few; return n + ' ' + many;
+}
+const days = n => n === 0 ? '0 يوم' : plural(n, 'يوم واحد', 'يومان', 'أيام', 'يوماً');
+const ORD = ['', 'الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة', 'التاسعة', 'العاشرة'];
+const ordinal = n => ORD[n] || ('رقم ' + n);
+function today0() { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }
+function daysUntil(m, d) {
+  const t = today0();
+  const clamp = (y) => Math.min(d, new Date(y, m + 1, 0).getDate());
+  let n = new Date(t.getFullYear(), m, clamp(t.getFullYear()));
+  if (n < t) n = new Date(t.getFullYear() + 1, m, clamp(t.getFullYear() + 1));
+  return Math.round((n - t) / 864e5);
+}
+function nextYearCount(y, m, d) {
+  const du = daysUntil(m, d);
+  const n = new Date(today0().getTime() + du * 864e5);
+  return n.getFullYear() - y;
+}
+const newId = (arr) => Math.max(arr.reduce((m, o) => Math.max(m, Number(o.id) || 0), 0) + 1, now() * 1000 + Math.floor(Math.random() * 1000));
+
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// bottom sheet ------------------------------------------------------
+function sheet(title, body, actions = []) {
+  const sh = $('#sheet'); sh.innerHTML = '';
+  sh.append(el('h3', {}, title));
+  if (body) sh.append(body);
+  for (const a of actions) sh.append(el('button', { class: 'btn block' + (a.soft ? ' soft' : '') + (a.ghost ? ' ghost' : ''), onclick: a.fn }, a.label));
+  $('#sheetBg').style.display = 'block';
+  requestAnimationFrame(() => sh.classList.add('open'));
+}
+function closeSheet() { $('#sheet').classList.remove('open'); $('#sheetBg').style.display = 'none'; }
+$('#sheetBg').onclick = closeSheet;
+function choose(title, options, fn) {
+  const box = el('div');
+  options.forEach((o, i) => box.append(el('button', { class: 'opt', onclick: () => { closeSheet(); fn(i); } }, o)));
+  sheet(title, box, [{ label: 'إلغاء', ghost: true, fn: closeSheet }]);
+}
+function confirmSheet(title, text, yes, fn) {
+  sheet(title, el('p', { class: 'muted' }, text), [{ label: yes, fn: () => { closeSheet(); fn(); } }, { label: 'إلغاء', ghost: true, fn: closeSheet }]);
+}
+
+// ====================================================================
+// Firebase over REST
+// ====================================================================
+async function http(method, url, body, type = 'application/json') {
+  const opt = { method, headers: {} };
+  if (body !== undefined) { opt.headers['Content-Type'] = type; opt.body = typeof body === 'string' && type !== 'application/json' ? body : JSON.stringify(body); }
+  const r = await fetch(url, opt);
+  const txt = await r.text();
+  if (!r.ok) { const e = new Error(txt); e.status = r.status; e.body = txt; throw e; }
+  return txt ? JSON.parse(txt) : null;
+}
+function errorText(e) {
+  const b = (e && (e.body || e.message)) || '';
+  if (/EMAIL_EXISTS/.test(b)) return 'هذا البريد مسجل من قبل، استعملي «لدي حساب»';
+  if (/EMAIL_NOT_FOUND|INVALID_PASSWORD|INVALID_LOGIN_CREDENTIALS/.test(b)) return 'البريد أو كلمة السر غير صحيحة';
+  if (/WEAK_PASSWORD/.test(b)) return 'كلمة السر قصيرة: 6 أحرف على الأقل';
+  if (/INVALID_EMAIL/.test(b)) return 'البريد الإلكتروني غير صحيح';
+  if (/CONFIGURATION_NOT_FOUND|OPERATION_NOT_ALLOWED/.test(b)) return 'خدمة الحسابات غير مفعّلة في Firebase بعد';
+  if (/TOO_MANY_ATTEMPTS/.test(b)) return 'محاولات كثيرة، انتظري قليلاً';
+  if (/Permission denied/.test(b)) return 'رُفض الوصول';
+  if (e && e.arabic) return e.message;
+  if (e instanceof TypeError) return 'لا يوجد اتصال بالإنترنت';
+  return 'حدث خطأ، حاولي مرة أخرى';
+}
+function arabic(msg) { const e = new Error(msg); e.arabic = true; return e; }
+
+async function authCall(endpoint, body) {
+  return http('POST', CFG.authBase + endpoint + '?key=' + encodeURIComponent(CFG.key), body);
+}
+function saveAuth(r, email) {
+  S.uid = r.localId; S.token = r.idToken; S.refresh = r.refreshToken; S.email = email;
+  S.exp = now() + ((Number(r.expiresIn) || 3600) - 120) * 1000; save(); swAuth();
+}
+let refreshing = null;
+async function token() {
+  if (S.token && now() < (S.exp || 0)) return S.token;
+  if (!S.refresh) throw arabic('يجب تسجيل الدخول');
+  if (!refreshing) refreshing = (async () => {
+    try {
+      const r = await http('POST', CFG.tokenBase + '?key=' + encodeURIComponent(CFG.key),
+        'grant_type=refresh_token&refresh_token=' + encodeURIComponent(S.refresh), 'application/x-www-form-urlencoded');
+      S.token = r.id_token; S.refresh = r.refresh_token || S.refresh;
+      S.exp = now() + ((Number(r.expires_in) || 3600) - 120) * 1000; save(); swAuth();
+      return S.token;
+    } finally { refreshing = null; }
+  })();
+  return refreshing;
+}
+const dbUrl = async (path, query) => `${CFG.db}/${path}.json?auth=${encodeURIComponent(await token())}${query ? '&' + query : ''}${CFG.q}`;
+async function db(method, path, body) {
+  try { return await http(method, await dbUrl(path), body); }
+  catch (e) { if (e.status === 401) { S.exp = 0; return http(method, await dbUrl(path), body); } throw e; }
+}
+const get = p => db('GET', p);
+const put = (p, v) => db('PUT', p, v);
+const patch = (p, v) => db('PATCH', p, v);
+const post = async (p, v) => (await db('POST', p, v)).name;
+const del = p => db('DELETE', p);
+const SERVER_TIME = { '.sv': 'timestamp' };
+const base = () => 'couples/' + S.cid;
+const linked = () => !!(S.uid && S.refresh && S.cid);
+
+// live streams (Server-Sent Events) ---------------------------------
+function stream(path, query, onEvent) {
+  let es = null, closed = false, backoff = 2000, timer = null;
+  const handle = (ev) => { backoff = 2000; try { const d = JSON.parse(ev.data); onEvent(ev.type, d.path, d.data); } catch (e) {} };
+  async function open() {
+    if (closed) return;
+    try {
+      es = new EventSource(await dbUrl(path, query));
+      es.addEventListener('put', handle);
+      es.addEventListener('patch', handle);
+      es.addEventListener('auth_revoked', () => { S.exp = 0; reopen(500); });
+      es.addEventListener('cancel', () => reopen(30000));
+      es.onerror = () => { if (es && es.readyState === 2) reopen(); };
+    } catch (e) { reopen(); }
+  }
+  function reopen(delay) {
+    if (es) es.close(); es = null;
+    if (closed) return;
+    clearTimeout(timer); timer = setTimeout(open, delay || backoff); backoff = Math.min(backoff * 2, 60000);
+  }
+  open();
+  return { close() { closed = true; clearTimeout(timer); if (es) es.close(); }, restart() { backoff = 2000; reopen(10); } };
+}
+function setAt(root, path, val) {
+  const segs = path.split('/').filter(Boolean);
+  const remove = val === null || val === undefined;
+  if (Array.isArray(val)) val = Object.fromEntries(val.map((v, i) => [String(i), v]).filter(([, v]) => v != null));
+  if (!segs.length) return (val && typeof val === 'object') ? val : {};
+  let cur = root;
+  for (const s of segs.slice(0, -1)) {
+    if (!cur[s] || typeof cur[s] !== 'object') { if (remove) return root; cur[s] = {}; }
+    cur = cur[s];
+  }
+  const last = segs[segs.length - 1];
+  if (remove) delete cur[last]; else cur[last] = val;
+  return root;
+}
+function applyEvent(root, ev, path, data) {
+  if (ev === 'patch' && data && typeof data === 'object') {
+    for (const [k, v] of Object.entries(data)) root = setAt(root, path + '/' + k, v);
+    return root;
+  }
+  return setAt(root, path, data);
+}
+
+// ====================================================================
+// account + linking (same protocol as the Android app)
+// ====================================================================
+async function signUp(email, pass, name) {
+  saveAuth(await authCall('signUp', { email, password: pass, returnSecureToken: true }), email);
+  S.name = name; save();
+  await patch('users/' + S.uid, { name, role: 'wife' });
+}
+async function signIn(email, pass) {
+  saveAuth(await authCall('signInWithPassword', { email, password: pass, returnSecureToken: true }), email);
+  const u = await get('users/' + S.uid);
+  if (u) { if (u.name) S.name = u.name; if (u.couple) S.cid = u.couple; save(); }
+  if (S.cid) await findPartner();
+}
+function readCode(text) {
+  text = (text || '').trim();
+  const m = text.match(/BOUCHRA:([A-Za-z0-9_\-=]+)/);
+  if (m) {
+    try {
+      const b64 = m[1].replace(/-/g, '+').replace(/_/g, '/');
+      const js = JSON.parse(decodeURIComponent(escape(atob(b64))));
+      if (js.c) return String(js.c);
+    } catch (e) {}
+  }
+  const d = text.replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)).match(/\b(\d{6})\b/);
+  return d ? d[1] : null;
+}
+async function join(code) {
+  await put('users/' + S.uid + '/joinCode', code);
+  const c = await get('codes/' + code);
+  if (!c || !c.couple) throw arabic('الرمز غير صحيح أو استُعمل من قبل. اطلبي رمزاً جديداً من زوجك 💌');
+  const cid = c.couple;
+  try {
+    await patch('', { ['couples/' + cid + '/members/' + S.uid]: true, ['couples/' + cid + '/full']: true, ['codes/' + code]: null });
+  } catch (e) {
+    if (e.status === 401 || e.status === 403) throw arabic('لا يمكن الانضمام بهذا الرمز. اطلبي رمزاً جديداً 💌');
+    throw e;
+  }
+  await put('couples/' + cid + '/profiles/' + S.uid, { name: S.name, role: 'wife', lastSeen: now() });
+  await patch('users/' + S.uid, { couple: cid });
+  S.cid = cid; save(); swAuth();
+  await findPartner();
+  await sendInbox('join', '💞 ' + S.name, 'انضمت إليك! أصبحتما مرتبطين 💕');
+}
+async function findPartner() {
+  if (S.partner) return S.partner;
+  const pr = await get(base() + '/profiles');
+  for (const [k, v] of Object.entries(pr || {})) if (k !== S.uid) { S.partner = k; S.partnerName = (v && v.name) || ''; save(); return k; }
+  return '';
+}
+async function sendInbox(kind, title, text) {
+  const pu = await findPartner();
+  if (!pu) return;
+  await post(base() + '/inbox/' + pu, { kind, title, text, t: now() });
+}
+function notifyPartner(kind, title, text) { if (linked()) sendInbox(kind, title, text).catch(() => {}); }
+function signOut() {
+  closeStreams();
+  const keep = { myReminders: S.myReminders, tellPartner: S.tellPartner };
+  S = keep; save(); swAuth(); render();
+}
+
+// the service worker reads this to fetch notifications while the app is closed
+async function swAuth() {
+  if (!('caches' in window)) return;
+  try {
+    const c = await caches.open('bouchra-auth');
+    await c.put('./__auth', new Response(JSON.stringify({
+      key: CFG.key, db: CFG.db, q: CFG.q, tokenBase: CFG.tokenBase, refresh: S.refresh || '', uid: S.uid || '', cid: S.cid || ''
+    })));
+  } catch (e) {}
+}
+
+// ====================================================================
+// shared data (kept live by streams)
+// ====================================================================
+let shared = {}, msgs = {}, profiles = {};
+let streams = [];
+const sending = new Map();
+const markedRead = new Set();
+const handledInbox = new Set();
+
+function startStreams() {
+  closeStreams();
+  if (!linked()) return;
+  streams.push(stream(base() + '/shared', null, (ev, p, d) => { shared = applyEvent(shared, ev, p, d); onData('shared'); }));
+  streams.push(stream(base() + '/messages', 'orderBy=%22%24key%22&limitToLast=150', (ev, p, d) => { msgs = applyEvent(msgs, ev, p, d); onData('msgs'); }));
+  streams.push(stream(base() + '/profiles', null, (ev, p, d) => { profiles = applyEvent(profiles, ev, p, d); onData('profiles'); }));
+  streams.push(stream(base() + '/inbox/' + S.uid, null, (ev, p, d) => onInbox(p, d)));
+}
+function closeStreams() { streams.forEach(s => s.close()); streams = []; }
+
+function listOf(key) {
+  return Object.values(shared[key] || {}).filter(o => o && typeof o === 'object').sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
+}
+/** Writes changed/removed items of one shared list as a single PATCH (same format as Android). */
+async function saveList(key, next) {
+  const before = new Map(listOf(key).map(o => ['i' + o.id, JSON.stringify(o)]));
+  const after = new Map(next.map(o => ['i' + o.id, o]));
+  const diff = {};
+  for (const [k, o] of after) if (before.get(k) !== JSON.stringify(o)) diff[k] = o;
+  for (const k of before.keys()) if (!after.has(k)) diff[k] = null;
+  if (!Object.keys(diff).length) return;
+  for (const [k, v] of Object.entries(diff)) shared = setAt(shared, key + '/' + k, v); // optimistic
+  onData('shared');
+  try { await patch(base() + '/shared/' + key, diff); }
+  catch (e) { toast('لم يُحفظ 😢 ' + errorText(e)); }
+}
+
+function onInbox(path, data) {
+  const items = [];
+  if (path === '/' && data && typeof data === 'object') items.push(...Object.entries(data));
+  else if (data && typeof data === 'object' && path.split('/').filter(Boolean).length === 1) items.push([path.replace(/\//g, ''), data]);
+  for (const [k, v] of items) {
+    if (!v || handledInbox.has(k)) continue;
+    handledInbox.add(k);
+    const inChat = tab === 'chat' && document.visibilityState === 'visible';
+    if (!(inChat && ['msg', 'miss', 'mood'].includes(v.kind))) toast((v.title || '') + ' — ' + (v.text || ''));
+    if (v.kind === 'miss' && navigator.vibrate) navigator.vibrate([120, 120, 120, 500, 120, 120, 120]);
+    del(base() + '/inbox/' + S.uid + '/' + k).catch(() => {});
+  }
+}
+
+let renderQueued = false;
+function onData(what) {
+  if (what === 'profiles') { partnerProfile(); }
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => {
+    renderQueued = false;
+    if (tab === 'chat') { renderMessages(); updateChatHeader(); }
+    else if (what === 'shared' && ['shop', 'together', 'dreams', 'coupons'].includes(tab) && !editing()) renderTab();
+  });
+}
+// don't redraw while she is typing in a field of the current tab
+function editing() { const a = document.activeElement; return a && $('#main').contains(a) && /INPUT|TEXTAREA|SELECT/.test(a.tagName); }
+
+function partnerProfile() {
+  for (const [k, v] of Object.entries(profiles)) {
+    if (k !== S.uid && v) {
+      if (S.partner !== k || S.partnerName !== v.name) { S.partner = k; S.partnerName = v.name || ''; save(); }
+      return v;
+    }
+  }
+  return null;
+}
+const partnerName = () => S.partnerName || 'زوجي';
+
+// ====================================================================
+// UI shell
+// ====================================================================
+const TABS = [
+  ['chat', '💬', 'الدردشة', 'بيننا فقط 💕'],
+  ['shop', '🛒', 'المشتريات', 'جيب معاك... 🛍️'],
+  ['together', '💑', 'معاً', 'أيامنا ومناسباتنا 💕'],
+  ['dreams', '✨', 'أحلامنا', 'ما نحلم أن نحققه معاً 🌟'],
+  ['coupons', '🎟️', 'الكوبونات', 'هدايا من زوجك 🎁'],
+  ['mine', '⏰', 'تذكيراتي', 'تذكيرات الحب لأجمل زوج 🌸'],
+];
+let tab = (location.hash || '').slice(1) || S.tab || 'chat';
+
+function render() {
+  const nav = $('#nav'); nav.innerHTML = '';
+  if (!linked()) {
+    nav.style.display = 'none';
+    $('#subtitle').textContent = 'مساحتنا الخاصة 💕';
+    $('#main').className = '';
+    $('#main').replaceChildren(setupView());
+    return;
+  }
+  nav.style.display = 'flex';
+  if (!TABS.some(t => t[0] === tab)) tab = 'chat';
+  for (const [id, e, label] of TABS) {
+    nav.append(el('button', { class: id === tab ? 'on' : '', onclick: () => go(id) }, el('span', { class: 'e' }, e), label));
+  }
+  renderTab();
+}
+function go(id) { tab = id; S.tab = id; save(); history.replaceState(null, '', '#' + id); render(); }
+function renderTab() {
+  const t = TABS.find(t => t[0] === tab);
+  $('#subtitle').textContent = t[3];
+  const main = $('#main');
+  main.className = tab === 'chat' ? 'chatmode' : '';
+  const scroll = main.scrollTop;
+  const view = { chat: chatView, shop: shopView, together: togetherView, dreams: dreamsView, coupons: couponsView, mine: mineView }[tab]();
+  main.replaceChildren(view);
+  if (tab !== 'chat') main.scrollTop = scroll;
+  if (tab === 'chat') { renderMessages(); updateChatHeader(); }
+}
+
+const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+function installCard() {
+  if (standalone) return null;
+  return el('div', { class: 'card install' },
+    el('div', { class: 'title' }, '📲 ثبّتي التطبيق على شاشتك'),
+    el('div', { class: 'muted' }, isIOS
+      ? 'في Safari: اضغطي زر المشاركة ⬆️ في الأسفل، ثم «إضافة إلى الشاشة الرئيسية»، ثم «إضافة». بعدها افتحيه من أيقونته الوردية 💕 (الإشعارات تعمل فقط بعد التثبيت).'
+      : 'من قائمة المتصفح اختاري «إضافة إلى الشاشة الرئيسية».'));
+}
+
+// ---------------- setup (sign up / sign in / join) ----------------
+function setupView() {
+  const wrap = el('div');
+  const ic = installCard(); if (ic) wrap.append(ic);
+  wrap.append(el('div', { class: 'card hero' }, el('h2', {}, '💬 مرحباً يا بشرى 💕'),
+    el('div', { class: 'sub' }, 'دردشة بينكِ وبين زوجكِ فقط، ومشتريات وأحلام وكوبونات مشتركة بين هاتفيكما.')));
+
+  if (S.uid && S.refresh) { // signed in, not linked yet
+    const code = el('input', { class: 'field ltr', inputmode: 'numeric', placeholder: 'رمز الربط (6 أرقام)', autocomplete: 'one-time-code' });
+    const btn = el('button', { class: 'btn block' }, '💞 ربط');
+    btn.onclick = () => busy(btn, '⏳ جاري الربط...', async () => {
+      const c = readCode(code.value); if (!c) throw arabic('اكتبي رمز الربط المكوّن من 6 أرقام');
+      await join(c); toast('🎉 تم الربط! أصبحتما معاً 💕'); afterLink();
+    });
+    wrap.append(el('div', { class: 'card' }, el('div', { class: 'title' }, '💞 الربط مع زوجك'),
+      el('div', { class: 'muted' }, 'اطلبي من زوجك: تطبيق بشرى ← الدردشة ← «إنشاء دعوة»، ثم اكتبي رمز الربط هنا (أو الصقي الرسالة كاملة).'),
+      code, btn, el('button', { class: 'btn ghost block', onclick: signOut }, 'تسجيل الخروج')));
+    return wrap;
+  }
+
+  const name = el('input', { class: 'field', placeholder: 'الاسم', value: S.name || 'بشرى' });
+  const email = el('input', { class: 'field ltr', type: 'email', placeholder: 'البريد الإلكتروني', autocomplete: 'email' });
+  const pass = el('input', { class: 'field ltr', type: 'password', placeholder: 'كلمة السر (6 أحرف على الأقل)', autocomplete: 'current-password' });
+  const code = el('input', { class: 'field ltr', inputmode: 'numeric', placeholder: 'رمز الربط من زوجك (6 أرقام)', value: S.pendingCode || '', autocomplete: 'one-time-code' });
+  const create = el('button', { class: 'btn block' }, '✨ إنشاء حساب وربط');
+  const login = el('button', { class: 'btn soft block' }, '🔑 لدي حساب');
+  create.onclick = () => busy(create, '⏳ جاري الإنشاء...', async () => {
+    const n = name.value.trim(), em = email.value.trim(), pw = pass.value, c = readCode(code.value);
+    if (!n) throw arabic('اكتبي الاسم');
+    if (!em || pw.length < 6) throw arabic('اكتبي البريد وكلمة سر من 6 أحرف أو أكثر');
+    if (!c) throw arabic('اكتبي رمز الربط المكوّن من 6 أرقام (من تطبيق زوجك)');
+    S.pendingCode = c; save();
+    await signUp(em, pw, n);
+    await join(c); delete S.pendingCode; save();
+    toast('🎉 تم! أصبحتما مرتبطين 💕'); afterLink();
+  });
+  login.onclick = () => busy(login, '⏳ جاري الدخول...', async () => {
+    const em = email.value.trim(), pw = pass.value;
+    if (!em || !pw) throw arabic('اكتبي البريد وكلمة السر');
+    await signIn(em, pw);
+    if (!S.cid) { const c = readCode(code.value); if (c) await join(c); }
+    if (S.cid) { toast('👋 أهلاً بعودتكِ'); afterLink(); } else render();
+  });
+  wrap.append(el('div', { class: 'card' }, el('div', { class: 'title' }, '👤 حسابكِ'),
+    el('div', { class: 'muted' }, 'أنشئي حسابك واكتبي رمز الربط الذي يظهر في تطبيق زوجك (الدردشة ← إنشاء دعوة).'),
+    name, email, pass, code, create, login));
+  return wrap;
+}
+async function busy(btn, waitText, job) {
+  if (btn.disabled) return;
+  const old = btn.textContent; btn.disabled = true; btn.textContent = waitText;
+  try { await job(); }
+  catch (e) { sheet('😕 لم ينجح', el('p', {}, errorText(e)), [{ label: 'حسناً', fn: closeSheet }]); }
+  finally { btn.disabled = false; btn.textContent = old; }
+}
+function afterLink() { startStreams(); presence(true); go('chat'); }
+
+// ---------------- account sheet ----------------
+$('#accBtn').onclick = () => {
+  const box = el('div');
+  if (!S.uid) box.append(el('p', { class: 'muted' }, 'لم تسجّلي الدخول بعد.'));
+  else box.append(el('p', {}, '👤 ' + (S.name || '') + '\n'), el('p', { class: 'muted' }, '📧 ' + (S.email || '')),
+    el('p', { class: 'muted' }, linked() && S.partner ? '💞 مرتبطة مع: ' + partnerName() : '💞 لم يتم الربط بعد'));
+  const tell = el('label', { class: 'row', style: 'margin-top:10px' },
+    el('input', { type: 'checkbox', checked: S.tellPartner !== false, onchange: e => { S.tellPartner = e.target.checked; save(); } }),
+    el('span', { class: 'muted' }, 'أخبري زوجك عندما تضغطين «تم ✓» على تذكير'));
+  box.append(tell);
+  const actions = [];
+  if (linked()) actions.push({ label: pushState() === 'on' ? '🔔 الإشعارات مفعّلة (إعادة التفعيل)' : '🔔 تفعيل الإشعارات', fn: () => { closeSheet(); enablePush(); } });
+  if (S.uid) actions.push({ label: 'تسجيل الخروج', ghost: true, fn: () => { closeSheet(); confirmSheet('تسجيل الخروج؟', 'تبقى بياناتكِ محفوظة في حسابكِ.', 'خروج', signOut); } });
+  actions.push({ label: 'إغلاق', soft: true, fn: closeSheet });
+  sheet('الحساب', box, actions);
+};
+
+// ====================================================================
+// notifications (Web Push; the Android app sends them)
+// ====================================================================
+const b64u = buf => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const unb64u = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); while (s.length % 4) s += '='; return Uint8Array.from(atob(s), c => c.charCodeAt(0)); };
+function pushState() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) return 'unsupported';
+  return Notification.permission === 'granted' && S.pushOn ? 'on' : 'off';
+}
+async function enablePush() {
+  if (pushState() === 'unsupported') {
+    sheet('🔔 الإشعارات', el('p', {}, isIOS && !standalone
+      ? 'على الآيفون تعمل الإشعارات فقط بعد تثبيت التطبيق: زر المشاركة ⬆️ ← «إضافة إلى الشاشة الرئيسية»، ثم افتحيه من أيقونته واضغطي هذا الزر مجدداً.'
+      : 'هذا المتصفح لا يدعم الإشعارات.'), [{ label: 'حسناً', fn: closeSheet }]);
+    return;
+  }
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('لم يتم السماح بالإشعارات'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    if (!S.vapid) {
+      const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+      const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+      S.vapid = { pub: b64u(await crypto.subtle.exportKey('raw', kp.publicKey)), d: jwk.d, x: jwk.x, y: jwk.y }; save();
+    }
+    let sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      const k = sub.options && sub.options.applicationServerKey;
+      if (!k || b64u(k) !== S.vapid.pub) { await sub.unsubscribe(); sub = null; }
+    }
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: unb64u(S.vapid.pub) });
+    const j = sub.toJSON();
+    await put(base() + '/push/' + S.uid, { endpoint: j.endpoint, p256dh: j.keys.p256dh, auth: j.keys.auth, vapid: S.vapid, t: now() });
+    S.pushOn = true; save(); await swAuth();
+    toast('🔔 تم تفعيل الإشعارات 💕');
+  } catch (e) {
+    toast('تعذّر تفعيل الإشعارات: ' + errorText(e));
+  }
+}
+
+// ====================================================================
+// 💬 chat
+// ====================================================================
+const MOODS = [['😊', 'سعيدة'], ['🥰', 'مشتاقة'], ['😴', 'متعبة'], ['😢', 'حزينة'], ['😡', 'غاضبة'], ['🤒', 'مريضة'], ['🤩', 'متحمسة'], ['😌', 'هادئة'], ['🍽️', 'جائعة'], ['🤗', 'أحتاج حضناً']];
+const QUICK = ['أحبك ❤️', 'متى ترجع؟ 🏠', 'جيب معاك خبز 🍞', 'أنا في الطريق 🚗', 'وصلت ✅', 'اتصل بي 📞', 'حاضر يا عمري 😘', 'تصبح على خير 🌙'];
+let lastTyping = 0;
+
+function chatView() {
+  const col = el('div', { style: 'display:flex;flex-direction:column;height:100%' });
+  const ic = installCard(); if (ic) { ic.style.margin = '8px 10px 0'; col.append(ic); }
+  if (standalone && pushState() === 'off') {
+    col.append(el('div', { class: 'card install', style: 'margin:8px 10px 0' }, el('div', { class: 'row' },
+      el('div', { class: 'grow muted' }, '🔔 فعّلي الإشعارات لتصلكِ رسائل زوجكِ حتى والتطبيق مغلق'),
+      el('button', { class: 'btn', onclick: enablePush }, 'تفعيل'))));
+  }
+  const miss = el('button', { class: 'btn' }, '💗 اشتقت لك');
+  miss.onclick = () => { miss.classList.remove('pop'); void miss.offsetWidth; miss.classList.add('pop'); send('اشتقت لك 💗', 'miss'); };
+  const mood = el('button', { class: 'btn soft' }, '🎭 مزاجي');
+  mood.onclick = () => choose('🎭 كيف مزاجكِ الآن؟', MOODS.map(m => m[0] + '  ' + m[1]), i => {
+    const [e, label] = MOODS[i];
+    patch(base() + '/profiles/' + S.uid, { mood: e, moodText: label, moodAt: now() }).catch(() => {});
+    notifyPartner('mood', '🎭 ' + S.name, 'مزاجي الآن: ' + e + ' ' + label);
+    toast('تم إرسال مزاجك ' + e);
+  });
+  col.append(el('div', { class: 'chat-top' },
+    el('div', { class: 'bubble-e', id: 'pAvatar' }, '🤵'),
+    el('div', { class: 'grow' }, el('div', { class: 'title', id: 'pName' }, partnerName() + ' 💕'),
+      el('div', { class: 'muted', id: 'pStatus' }), el('div', { class: 'muted', id: 'pMood', style: 'color:var(--pink)' })),
+    el('div', { class: 'acts' }, miss, mood)));
+  col.append(el('div', { id: 'msgs' }));
+  const quick = el('div', { class: 'quick' });
+  QUICK.forEach(q => quick.append(el('button', { onclick: () => send(q, 'text') }, q)));
+  col.append(quick);
+  const ta = el('textarea', { rows: 1, placeholder: 'اكتبي رسالة حب...' });
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 110) + 'px';
+    if (ta.value && now() - lastTyping > 3000) { lastTyping = now(); patch(base() + '/profiles/' + S.uid, { typing: now() }).catch(() => {}); }
+  });
+  const sendBtn = el('button', { class: 'send', 'aria-label': 'إرسال' }, '➤');
+  sendBtn.onclick = () => { const t = ta.value.trim(); if (!t) return; ta.value = ''; ta.style.height = 'auto'; send(t, 'text'); ta.focus(); };
+  col.append(el('div', { class: 'composer' }, ta, sendBtn));
+  return col;
+}
+
+function updateChatHeader() {
+  const pn = $('#pName'); if (!pn) return;
+  const pp = partnerProfile();
+  if (!pp) { pn.textContent = 'زوجي 💕'; $('#pStatus').textContent = ''; return; }
+  const fem = pp.role === 'wife';
+  $('#pAvatar').textContent = fem ? '👰' : '🤵';
+  pn.textContent = (pp.name || partnerName()) + ' 💕';
+  let st = '';
+  if (now() - (pp.typing || 0) < 6000) st = fem ? 'تكتب الآن... ✍️' : 'يكتب الآن... ✍️';
+  else if (pp.online && now() - (pp.lastSeen || 0) < 150000) st = fem ? 'متصلة الآن 🟢' : 'متصل الآن 🟢';
+  else if (pp.lastSeen) st = 'آخر ظهور ' + whenText(pp.lastSeen);
+  $('#pStatus').textContent = st;
+  $('#pMood').textContent = pp.mood ? (fem ? 'مزاجها: ' : 'مزاجه: ') + pp.mood + ' ' + (pp.moodText || '') : '';
+}
+
+function renderMessages() {
+  const box = $('#msgs'); if (!box) return;
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80;
+  box.innerHTML = '';
+  const rows = Object.keys(msgs).sort().map(k => [k, msgs[k], false]).filter(r => r[1] && typeof r[1] === 'object');
+  for (const [k, m] of sending) rows.push([k, m, true]);
+  if (!rows.length) box.append(el('div', { class: 'empty' }, 'ابدئي أول رسالة حب 💌'));
+  let lastDay = '';
+  const toRead = {};
+  for (const [k, m, pending] of rows) {
+    const t = Number(m.t) || now();
+    const day = sameDay(t, now()) ? 'اليوم' : sameDay(t, now() - 864e5) ? 'أمس' : ddmmyyyy(t);
+    if (day !== lastDay) { lastDay = day; box.append(el('div', { class: 'day' }, day)); }
+    const mine = m.from === S.uid;
+    let meta = hhmm(t);
+    if (mine) meta += pending ? '  🕓' : m.read ? '  ✓✓' : '  ✓';
+    const b = el('div', { class: 'msg ' + (mine ? 'me' : 'them') + (m.type === 'miss' ? ' miss' : '') },
+      el('div', {}, m.text || ''), el('div', { class: 'meta', style: mine && m.read ? 'font-weight:700' : '' }, meta));
+    if (!pending) b.addEventListener('contextmenu', e => { e.preventDefault(); msgMenu(k, m, mine); });
+    if (!pending) longPress(b, () => msgMenu(k, m, mine));
+    box.append(b);
+    if (!pending && !mine && !m.read && !markedRead.has(k)) { toRead[k + '/read'] = true; markedRead.add(k); }
+  }
+  if (atBottom || rows.length < 30 || sending.size) box.scrollTop = box.scrollHeight;
+  if (Object.keys(toRead).length && document.visibilityState === 'visible') patch(base() + '/messages', toRead).catch(() => {});
+}
+function longPress(node, fn) {
+  let t;
+  node.addEventListener('touchstart', () => { t = setTimeout(fn, 550); }, { passive: true });
+  ['touchend', 'touchmove', 'touchcancel'].forEach(ev => node.addEventListener(ev, () => clearTimeout(t), { passive: true }));
+}
+function msgMenu(k, m, mine) {
+  const opts = ['📋 نسخ']; if (mine) opts.push('🗑️ حذف للجميع');
+  choose('الرسالة', opts, i => {
+    if (i === 0) { navigator.clipboard && navigator.clipboard.writeText(m.text || ''); toast('تم النسخ'); }
+    else del(base() + '/messages/' + k).catch(() => toast('تعذّر الحذف'));
+  });
+}
+async function send(text, type) {
+  const tmp = '~' + now() + Math.random();
+  sending.set(tmp, { from: S.uid, text, type, t: now() });
+  renderMessages();
+  try {
+    await post(base() + '/messages', { from: S.uid, text, type, t: SERVER_TIME, read: false });
+    sending.delete(tmp); renderMessages();
+    try {
+      if (type === 'miss') await sendInbox('miss', '💗 ' + S.name, 'مشتاقة لك كثيراً 🥺');
+      else await sendInbox('msg', '💬 ' + S.name, text);
+    } catch (e) {}
+  } catch (e) {
+    sending.delete(tmp); renderMessages(); toast('لم تُرسل 😢 ' + errorText(e));
+  }
+}
+function presence(online) {
+  if (!linked()) return;
+  patch(base() + '/profiles/' + S.uid, { online, lastSeen: now(), name: S.name || 'بشرى', role: 'wife' }).catch(() => {});
+}
+
+// ====================================================================
+// 🛒 shopping
+// ====================================================================
+const CATS = ['🥬 خضروات', '🍎 فواكه', '🍗 لحوم ودجاج', '🥛 ألبان وبيض', '🍞 مخبوزات', '🍚 بقالة', '🧴 منظفات', '🏠 أخرى'];
+const SUGGEST = [['طماطم', 0], ['بصل', 0], ['بطاطا', 0], ['جزر', 0], ['خيار', 0], ['فلفل', 0], ['ثوم', 0], ['خس', 0], ['تفاح', 1], ['موز', 1], ['برتقال', 1], ['فراولة', 1], ['عنب', 1],
+  ['دجاج', 2], ['لحم', 2], ['سمك', 2], ['كفتة', 2], ['حليب', 3], ['بيض', 3], ['جبن', 3], ['ياغورت', 3], ['زبدة', 3], ['خبز', 4], ['كرواسون', 4],
+  ['أرز', 5], ['سكر', 5], ['زيت', 5], ['قهوة', 5], ['شاي', 5], ['معكرونة', 5], ['طحين', 5], ['ملح', 5], ['صابون', 6], ['منظف أواني', 6], ['مسحوق غسيل', 6], ['مناديل', 6]];
+let shopCat = 0;
+function addItem(text, cat) {
+  const list = listOf('shopping');
+  if (list.some(o => !o.bought && o.text === text)) { toast('موجود في القائمة ✅'); return; }
+  list.push({ id: newId(list), text, cat, bought: false });
+  saveList('shopping', list);
+  toast('أُضيف: ' + text);
+  notifyPartner('shop', '🛒 ' + S.name, 'أضافت إلى المشتريات: ' + text);
+}
+function shopView() {
+  const wrap = el('div');
+  const input = el('input', { class: 'field', placeholder: 'مثل: 2 كيلو طماطم', enterkeyhint: 'done' });
+  const add = () => { const t = input.value.trim(); if (!t) return; input.value = ''; addItem(t, shopCat); input.focus(); };
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); add(); } });
+  const cats = el('div', { class: 'chips' });
+  const drawCats = () => { cats.innerHTML = ''; CATS.forEach((c, i) => cats.append(el('button', { class: 'chip' + (i === shopCat ? ' on' : ''), onclick: () => { shopCat = i; drawCats(); } }, c))); };
+  drawCats();
+  const sugg = el('div', { class: 'chips' });
+  SUGGEST.forEach(([t, c]) => sugg.append(el('button', { class: 'chip light', onclick: () => addItem(t, c) }, t)));
+  wrap.append(el('div', { class: 'card' }, el('div', { class: 'title' }, '🛒 جيب معاك...'),
+    el('div', { class: 'row' }, el('div', { class: 'grow' }, input), el('button', { class: 'btn', style: 'margin-top:8px', onclick: add }, '➕')),
+    cats, el('div', { class: 'muted', style: 'margin-top:6px' }, 'اقتراحات سريعة (اضغطي للإضافة):'), sugg));
+
+  const items = listOf('shopping');
+  const left = items.filter(o => !o.bought).length;
+  wrap.append(el('div', { class: 'row', style: 'justify-content:center;margin:6px 0' },
+    el('button', { class: 'btn', onclick: shareList }, '📤 أرسلي القائمة'),
+    el('button', { class: 'btn soft', onclick: () => confirmSheet('حذف كل ما تم شراؤه؟', '', 'حذف', () => saveList('shopping', listOf('shopping').filter(o => !o.bought))) }, '🧹 حذف المُشترى')));
+  wrap.append(el('h3', { class: 'sec' }, items.length ? `📝 تبقّى ${left} من ${items.length}` : 'القائمة فارغة 🌸'));
+  CATS.forEach((c, ci) => {
+    const group = items.filter(o => (o.cat >= 0 && o.cat < CATS.length ? o.cat : CATS.length - 1) === ci);
+    if (!group.length) return;
+    const card = el('div', { class: 'card' }, el('div', { style: 'color:var(--pink);font-weight:700;font-size:14px' }, c));
+    for (const o of group) {
+      card.append(el('div', { class: 'item' + (o.bought ? ' done' : '') },
+        el('button', { class: 'grow', style: 'background:none;text-align:right;color:inherit;padding:0', onclick: () => toggleBought(o.id) },
+          (o.bought ? '✅  ' : '⬜  '), el('span', { class: 't' }, o.text)),
+        el('button', { class: 'x', 'aria-label': 'حذف', onclick: () => saveList('shopping', listOf('shopping').filter(x => x.id !== o.id)) }, '✕')));
+    }
+    wrap.append(card);
+  });
+  return wrap;
+}
+function toggleBought(id) {
+  const list = listOf('shopping').map(o => ({ ...o }));
+  const it = list.find(o => o.id === id); if (!it) return;
+  it.bought = !it.bought;
+  saveList('shopping', list);
+  if (it.bought) notifyPartner('shop', '🛒 ' + S.name, 'اشترت: ' + it.text + ' ✅');
+}
+function shareList() {
+  const items = listOf('shopping').filter(o => !o.bought);
+  if (!items.length) { toast('لا يوجد شيء لإرساله'); return; }
+  let s = '🛒 جيب معاك يا حبيبي 💕\n';
+  CATS.forEach((c, ci) => { const g = items.filter(o => (o.cat ?? 7) === ci); if (g.length) s += '\n' + c + ':\n' + g.map(o => '• ' + o.text).join('\n') + '\n'; });
+  shareText(s);
+}
+function shareText(s) {
+  if (navigator.share) navigator.share({ text: s }).catch(() => {});
+  else if (navigator.clipboard) navigator.clipboard.writeText(s).then(() => toast('تم النسخ ✅'));
+}
+
+// ====================================================================
+// 💑 together
+// ====================================================================
+const PHRASES = ['أنت أجمل صدفة في حياتي 💕', 'كل يوم معك هو عيد ❤️', 'ابتسامتك تضيء يومي ☀️', 'أحبك أكثر مما تقوله الكلمات 💗', 'أنت سندي وأماني 🏡',
+  'لو عاد بي الزمن لاخترتك من جديد 💍', 'قلبي ينبض باسمك 💓', 'أنت نصفي الأجمل 🌹', 'معك عرفت معنى السعادة 😊', 'شكراً لأنك في حياتي 🙏', 'أنت حلمي الذي تحقق ✨',
+  'وجودك يكفيني عن العالم كله 🌍', 'كل شيء أجمل عندما تكون بجانبي 💞', 'أنت ملك قلبي 👑', 'أشتاق إليك حتى وأنت بجانبي 🥰', 'صوتك أجمل ما أسمع 🎶', 'أنت أغلى ما أملك 💎',
+  'الله يحفظك لي ويديمك نعمة في حياتي 🤲', 'حبك يكبر في قلبي كل يوم 🌱', 'معك أشعر بالأمان 🛡️', 'أنت رفيق دربي وأحلامي 🛤️', 'لا أتخيل حياتي بدونك 💘', 'أحب تفاصيلك الصغيرة كلها 🧸',
+  'أنت نعمة أحمد الله عليها كل يوم 🤍', 'قلبي ملكك للأبد ♾️', 'أجمل لحظاتي هي التي أقضيها معك ⏳', 'تعبك من أجلنا لا يُنسى، شكراً يا حبيبي 💪', 'أنت أحلى قرار في حياتي ✅',
+  'أحبك اليوم أكثر من الأمس وأقل من الغد 💗', 'سأبقى أحبك حتى آخر نفس 💞'];
+const phraseOfDay = () => { const d = new Date(); const doy = Math.floor((d - new Date(d.getFullYear(), 0, 0)) / 864e5); return PHRASES[(d.getFullYear() * 366 + doy) % PHRASES.length]; };
+const OCC_TYPES = [['🎂', 'عيد ميلاد بشرى'], ['🎂', 'عيد ميلاد الزوج'], ['💞', 'أول لقاء'], ['💐', 'خطوبتنا'], ['🎉', 'مناسبة أخرى...']];
+
+function togetherView() {
+  const wrap = el('div');
+  const since = Number(shared.since || 0);
+  const dateInput = el('input', { type: 'date', class: 'field ltr', max: new Date().toISOString().slice(0, 10), style: 'max-width:220px;margin:10px auto 0;display:block' });
+  dateInput.onchange = () => { if (!dateInput.value) return; const [y, m, d] = dateInput.value.split('-').map(Number); setSince(new Date(y, m - 1, d).getTime()); };
+  const hero = el('div', { class: 'card hero' }, el('h2', {}, '💑 معاً منذ'));
+  if (!since) {
+    hero.append(el('div', { class: 'sub' }, 'اختاري تاريخ زواجكما لنحسب أيام حبكما 💕'), dateInput);
+  } else {
+    const s = new Date(since), n = today0();
+    let y = n.getFullYear() - s.getFullYear(), m = n.getMonth() - s.getMonth(), d = n.getDate() - s.getDate();
+    if (d < 0) { m--; d += new Date(n.getFullYear(), n.getMonth(), 0).getDate(); }
+    if (m < 0) { y--; m += 12; }
+    const parts = [];
+    if (y > 0) parts.push(plural(y, 'سنة', 'سنتان', 'سنوات', 'سنة'));
+    if (m > 0) parts.push(plural(m, 'شهر', 'شهران', 'أشهر', 'شهراً'));
+    if (d > 0 || !parts.length) parts.push(days(d));
+    const du = daysUntil(s.getMonth(), s.getDate()), cnt = nextYearCount(s.getFullYear(), s.getMonth(), s.getDate());
+    dateInput.value = `${s.getFullYear()}-${pad2(s.getMonth() + 1)}-${pad2(s.getDate())}`;
+    hero.append(el('div', { class: 'big' }, parts.join(' و ')),
+      el('div', { class: 'sub' }, 'أي ' + money(Math.max(0, Math.floor((n - since) / 864e5))) + ' يوماً من الحب 💕'),
+      el('div', { class: 'pill' }, du === 0 ? `🎉 اليوم ذكرى زواجكما ${ordinal(cnt)}! مبروك 💍` : `💍 الذكرى ${ordinal(cnt)} بعد ${days(du)}`),
+      el('details', { style: 'margin-top:8px' }, el('summary', { class: 'sub' }, 'تغيير التاريخ'), dateInput));
+  }
+  wrap.append(hero);
+
+  const phrase = el('div', { style: 'background:var(--pink-soft);color:var(--pink);font-weight:700;font-size:19px;border-radius:16px;padding:16px 14px;margin:10px 0;text-align:center' }, phraseOfDay());
+  wrap.append(el('div', { class: 'card', style: 'text-align:center' },
+    el('div', { class: 'title', style: 'font-size:18px' }, '🫙 جرّة الحب'),
+    el('div', { class: 'muted' }, 'رسالة اليوم — قوليها لزوجك أو أرسليها له'), phrase,
+    el('div', { class: 'row', style: 'justify-content:center' },
+      el('button', { class: 'btn', onclick: () => {
+        let p; do { p = PHRASES[Math.floor(Math.random() * PHRASES.length)]; } while (p === phrase.textContent);
+        phrase.textContent = p; phrase.classList.remove('pop'); void phrase.offsetWidth; phrase.classList.add('pop');
+      } }, '💌 اسحبي ورقة'),
+      el('button', { class: 'btn soft', onclick: () => send(phrase.textContent, 'text').then(() => toast('أُرسلت في الدردشة 💌')) }, '📤 أرسليها له'))));
+
+  wrap.append(el('h3', { class: 'sec' }, el('span', { class: 'grow' }, '📅 مناسباتنا'), el('button', { class: 'btn soft', onclick: addOccasion }, '➕ إضافة')));
+  const occ = listOf('occasions').sort((a, b) => daysUntil(a.m, a.d) - daysUntil(b.m, b.d));
+  if (!occ.length) wrap.append(el('p', { class: 'muted', style: 'padding:0 8px' }, 'أضيفي عيد ميلاده وأول لقاء بينكما 🎁'));
+  for (const o of occ) {
+    const du = daysUntil(o.m, o.d), cnt = nextYearCount(o.y, o.m, o.d);
+    wrap.append(el('div', { class: 'card row' }, el('div', { class: 'bubble-e' }, o.emoji || '🎉'),
+      el('div', { class: 'grow' }, el('div', { class: 'title' }, o.title),
+        el('div', { class: 'muted' }, '📆 ' + ddmmyyyy(new Date(o.y, o.m, o.d)) + (cnt > 0 ? '  •  ' + (/ميلاد/.test(o.title) ? 'العمر ' + cnt : 'الذكرى ' + ordinal(cnt)) : ''))),
+      el('div', { class: 'badge' + (du <= 7 ? ' hot' : '') }, du === 0 ? 'اليوم! 🎉' : du === 1 ? 'غداً' : 'بعد\n' + days(du)),
+      el('button', { class: 'x', onclick: () => confirmSheet('حذف المناسبة؟', o.title, 'حذف', () => saveList('occasions', listOf('occasions').filter(x => x.id !== o.id))) }, '✕')));
+  }
+  return wrap;
+}
+async function setSince(t) {
+  shared.since = t; renderTab();
+  try { await put(base() + '/shared/since', t); toast('تم الحفظ 💍'); } catch (e) { toast('لم يُحفظ 😢'); }
+}
+function addOccasion() {
+  choose('📅 أي مناسبة؟', OCC_TYPES.map(o => o[0] + '  ' + o[1]), i => {
+    const box = el('div');
+    const name = el('input', { class: 'field', placeholder: 'اسم المناسبة', value: i === OCC_TYPES.length - 1 ? '' : OCC_TYPES[i][1] });
+    const date = el('input', { class: 'field ltr', type: 'date' });
+    box.append(name, date);
+    sheet(OCC_TYPES[i][0] + ' مناسبة جديدة', box, [{ label: 'حفظ', fn: () => {
+      if (!name.value.trim() || !date.value) { toast('اكتبي الاسم واختاري التاريخ'); return; }
+      const [y, m, d] = date.value.split('-').map(Number);
+      const list = listOf('occasions');
+      list.push({ id: newId(list), emoji: OCC_TYPES[i][0], title: name.value.trim(), y, m: m - 1, d });
+      saveList('occasions', list); closeSheet(); toast('تم الحفظ ✅');
+    } }, { label: 'إلغاء', ghost: true, fn: closeSheet }]);
+  });
+}
+
+// ====================================================================
+// ✨ dreams
+// ====================================================================
+function dreamsView() {
+  const wrap = el('div');
+  const items = listOf('dreams');
+  const done = items.filter(o => o.done).length;
+  wrap.append(el('div', { class: 'card hero', style: 'background:linear-gradient(135deg,#C2185B,var(--pink-light))' },
+    el('h2', {}, '✨ أحلامنا معاً ✨'), el('div', { class: 'sub' }, `حققنا ${done} من ${items.length} أحلام 🌟`),
+    items.length ? el('div', { class: 'bar' }, el('div', { style: `width:${Math.round(done * 100 / items.length)}%` })) : null));
+  wrap.append(el('h3', { class: 'sec' }, el('span', { class: 'grow' }, '💭 نحلم بـ...'), el('button', { class: 'btn soft', onclick: addDream }, '➕ حلم جديد')));
+  items.filter(o => !o.done).forEach(o => wrap.append(dreamCard(o)));
+  if (done) { wrap.append(el('h3', { class: 'sec' }, '🎉 تحققت الحمد لله')); items.filter(o => o.done).forEach(o => wrap.append(dreamCard(o))); }
+  return wrap;
+}
+function dreamCard(o) {
+  const target = Number(o.target) || 0, saved = Number(o.saved) || 0;
+  const card = el('div', { class: 'card' + (o.done ? ' off' : '') },
+    el('div', { class: 'row' }, el('div', { class: 'bubble-e' }, o.emoji || '✨'),
+      el('div', { class: 'grow' }, el('div', { class: 'title', style: o.done ? 'color:var(--gray)' : '' }, o.title),
+        o.done ? el('div', { class: 'muted', style: 'color:var(--pink)' }, '✅ تحقق في ' + ddmmyyyy(o.doneDate || now())) : null),
+      el('button', { class: 'x', onclick: () => dreamMenu(o) }, '⋯')));
+  if (target > 0) {
+    card.append(el('div', { class: 'bar' }, el('div', { style: `width:${Math.min(100, Math.round(saved * 100 / target))}%` })),
+      el('div', { class: 'muted' }, `💰 جمعنا ${money(saved)} من ${money(target)}  (${Math.min(100, Math.floor(saved * 100 / target))}%)`));
+  }
+  if (!o.done) {
+    const row = el('div', { class: 'row', style: 'margin-top:10px' });
+    if (target > 0) row.append(el('button', { class: 'btn soft', onclick: () => addMoney(o) }, '➕ أضيفي مبلغاً'));
+    row.append(el('button', { class: 'btn', onclick: () => {
+      updateItem('dreams', o.id, { done: true, doneDate: now() });
+      sheet('🎉🎊 مبروك! 🎊🎉', el('p', {}, 'تحقق حلمكما: ' + o.title + '\n\nالحمد لله، وعقبال باقي الأحلام 💕'), [{ label: 'الحمد لله ❤️', fn: closeSheet }]);
+      notifyPartner('dream', '🎉 ' + S.name, 'تحقق حلمنا: ' + o.title + ' 💕');
+    } }, '🎉 تحقق!'));
+    card.append(row);
+  }
+  return card;
+}
+function updateItem(key, id, changes) {
+  const list = listOf(key).map(o => o.id === id ? { ...o, ...changes } : o);
+  saveList(key, list);
+}
+function dreamMenu(o) {
+  const opts = o.done ? ['↩️ إرجاعه إلى الأحلام', '🗑️ حذف'] : ['🗑️ حذف'];
+  choose(o.title, opts, i => {
+    if (o.done && i === 0) updateItem('dreams', o.id, { done: false });
+    else confirmSheet('حذف الحلم؟', o.title, 'حذف', () => saveList('dreams', listOf('dreams').filter(x => x.id !== o.id)));
+  });
+}
+function addMoney(o) {
+  const amount = el('input', { class: 'field ltr', inputmode: 'numeric', placeholder: 'المبلغ (سالب للإنقاص)' });
+  sheet('💰 أضيفي إلى الحصالة', amount, [{ label: 'إضافة', fn: () => {
+    const v = parseInt(amount.value.replace(/[٠-٩]/g, c => '٠١٢٣٤٥٦٧٨٩'.indexOf(c)), 10);
+    if (!v) return;
+    const saved = Math.max(0, (Number(o.saved) || 0) + v);
+    updateItem('dreams', o.id, { saved });
+    closeSheet();
+    if (saved >= o.target && v > 0) toast('🎯 وصلتما للهدف! اضغطي «تحقق»');
+    if (v > 0) notifyPartner('dream', '💰 ' + S.name, 'أضافت ' + money(v) + ' لحصالة: ' + o.title);
+  } }, { label: 'إلغاء', ghost: true, fn: closeSheet }]);
+  setTimeout(() => amount.focus(), 300);
+}
+function addDream() {
+  const emoji = el('input', { class: 'field', value: '✨', placeholder: 'رمز تعبيري' });
+  const title = el('input', { class: 'field', placeholder: 'ما هو حلمكما؟ (مثل: سفر إلى تركيا)' });
+  const target = el('input', { class: 'field ltr', inputmode: 'numeric', placeholder: 'المبلغ المطلوب (اختياري)' });
+  sheet('✨ حلم جديد', el('div', {}, emoji, title, target), [{ label: 'إضافة', fn: () => {
+    const t = title.value.trim(); if (!t) { toast('اكتبي الحلم أولاً'); return; }
+    const list = listOf('dreams');
+    list.push({ id: newId(list), emoji: emoji.value.trim() || '✨', title: t, target: parseInt(target.value, 10) || 0, saved: 0, done: false, doneDate: 0 });
+    saveList('dreams', list); closeSheet();
+  } }, { label: 'إلغاء', ghost: true, fn: closeSheet }]);
+}
+
+// ====================================================================
+// 🎟️ coupons
+// ====================================================================
+function couponsView() {
+  const wrap = el('div');
+  const items = listOf('coupons');
+  const active = items.filter(o => !o.used);
+  wrap.append(el('div', { class: 'card', style: 'background:var(--pink-soft);border:0;text-align:center;color:var(--pink-dark);font-weight:700' },
+    '🎟️ كوبونات الحب', el('br'), el('span', { style: 'font-weight:400;font-size:14px' }, 'هدايا من زوجك، استعمليها متى شئتِ وعليه التنفيذ 😄')));
+  wrap.append(el('h3', { class: 'sec' }, el('span', { class: 'grow' }, `✨ متاحة (${active.length})`), el('button', { class: 'btn soft', onclick: addCoupon }, '➕ كوبون')));
+  active.forEach(o => wrap.append(ticket(o)));
+  const used = items.filter(o => o.used);
+  if (used.length) { wrap.append(el('h3', { class: 'sec' }, '✔ مُستعملة')); used.forEach(o => wrap.append(ticket(o))); }
+  return wrap;
+}
+function ticket(o) {
+  const t = el('div', { class: 'ticket' + (o.used ? ' used' : '') }, el('div', { class: 'e' }, o.emoji || '🎟️'),
+    el('div', { class: 'grow' }, el('div', { class: 't' }, 'كوبون: ' + o.title), el('div', { class: 's' }, o.used ? 'استُعمل في ' + ddmmyyyy(o.usedDate || now()) : 'صالح دائماً 💕')));
+  if (!o.used) {
+    t.append(el('button', { class: 'btn white', onclick: () => confirmSheet((o.emoji || '') + ' استعمال الكوبون؟', o.title, 'نعم 💝', () => {
+      updateItem('coupons', o.id, { used: true, usedDate: now() });
+      toast('🎉 تم! أرسلته له، وعليه التنفيذ الآن 😄');
+      notifyPartner('coupon', '🎟️ ' + S.name, 'استعملت كوبون: ' + (o.emoji || '') + ' ' + o.title + ' — نفّذ الآن 😄');
+    }) }, '💝 استعمال'));
+  } else {
+    t.append(el('button', { class: 'x', onclick: () => choose(o.title, ['♻️ إعادة تفعيل', '🗑️ حذف'], i => {
+      if (i === 0) updateItem('coupons', o.id, { used: false });
+      else saveList('coupons', listOf('coupons').filter(x => x.id !== o.id));
+    }) }, '⋯'));
+  }
+  return t;
+}
+function addCoupon() {
+  const emoji = el('input', { class: 'field', value: '🎟️' });
+  const title = el('input', { class: 'field', placeholder: 'الكوبون (مثل: رحلة نهاية الأسبوع)' });
+  sheet('🎟️ كوبون جديد', el('div', {}, emoji, title), [{ label: 'إضافة', fn: () => {
+    const tt = title.value.trim(); if (!tt) return;
+    const list = listOf('coupons');
+    list.push({ id: newId(list), emoji: emoji.value.trim() || '🎟️', title: tt, used: false, usedDate: 0 });
+    saveList('coupons', list); closeSheet();
+  } }, { label: 'إلغاء', ghost: true, fn: closeSheet }]);
+}
+
+// ====================================================================
+// ⏰ my reminders (on this phone)
+// ====================================================================
+const MY_DEFAULTS = [['💋', 'قبّليه', 120], ['🤗', 'احضنيه', 180], ['❤️', 'قولي له: أحبك', 240], ['😊', 'ابتسمي له', 180], ['👀', 'انظري في عينيه', 240],
+  ['🌹', 'امدحيه', 300], ['📱', 'أرسلي له رسالة حب', 180], ['📞', 'اتصلي واسألي عنه', 360], ['😂', 'أضحكيه', 240], ['🙌', 'اشكريه على تعبه', 480],
+  ['👂', 'استمعي ليومه', 480], ['🤲', 'ادعي له', 360], ['💧', 'ذكّريه يشرب ماء', 120], ['☀️', 'صباح الخير يا حبيبي', 1440], ['🌙', 'تصبح على خير', 1440],
+  ['☕', 'حضّري له قهوته', 1440], ['🍰', 'حلوى يحبها', 4320], ['📸', 'صورة معه', 4320], ['🎁', 'مفاجأة صغيرة', 10080], ['🎬', 'سهرة معاً', 10080], ['💌', 'رسالة بخط يدك', 10080]];
+const INTERVALS = [30, 60, 120, 180, 240, 300, 360, 480, 720, 1440, 2880, 4320, 10080];
+function intervalText(m) {
+  if (m < 60) return 'كل ' + m + ' دقيقة'; if (m === 60) return 'كل ساعة'; if (m === 120) return 'كل ساعتين';
+  if (m < 1440) return 'كل ' + (m / 60) + (m / 60 <= 10 ? ' ساعات' : ' ساعة');
+  if (m === 1440) return 'يومياً'; if (m === 2880) return 'كل يومين'; if (m === 10080) return 'أسبوعياً'; return 'كل ' + (m / 1440) + ' أيام';
+}
+function quietAdjust(t) { const d = new Date(t); const h = d.getHours(); if (h >= 23 || h < 8) { if (h >= 23) d.setDate(d.getDate() + 1); d.setHours(8, 0, 0, 0); return d.getTime(); } return t; }
+function myReminders() {
+  if (!S.myReminders) { S.myReminders = MY_DEFAULTS.map(([e, t, m], i) => ({ id: i + 1, emoji: e, title: t, interval: m, next: quietAdjust(now() + m * 6e4), today: 0, todayDate: '', total: 0, on: true })); save(); }
+  const key = new Date().toDateString();
+  for (const r of S.myReminders) if (r.todayDate !== key) r.today = 0;
+  return S.myReminders;
+}
+function mineView() {
+  const wrap = el('div');
+  const list = myReminders();
+  const total = list.reduce((s, r) => s + (r.todayDate === new Date().toDateString() ? r.today : 0), 0);
+  wrap.append(el('div', { style: 'text-align:center' }, el('span', { class: 'pill', style: 'box-shadow:0 1px 3px rgba(0,0,0,.08)' }, '❤️ أنجزتِ اليوم: ' + total + ' ❤️')));
+  wrap.append(el('p', { class: 'muted', style: 'padding:0 6px' }, 'الآيفون لا يسمح لتطبيقات الويب بالتذكير وهي مغلقة، لذلك يظهر هنا ما حان وقته عندما تفتحين التطبيق 💕. لا تذكيرات من 11 ليلاً حتى 8 صباحاً.'));
+  const due = list.filter(r => r.on && r.next <= now()).sort((a, b) => a.next - b.next);
+  const rest = list.filter(r => !(r.on && r.next <= now()));
+  if (due.length) { wrap.append(el('h3', { class: 'sec' }, '🔔 حان وقتها')); due.forEach(r => wrap.append(remCard(r, true))); }
+  wrap.append(el('h3', { class: 'sec' }, '⏰ تذكيراتي'));
+  rest.sort((a, b) => (b.on - a.on) || (a.next - b.next)).forEach(r => wrap.append(remCard(r, false)));
+  return wrap;
+}
+function remCard(r, due) {
+  const card = el('div', { class: 'card row' + (r.on ? '' : ' off'), style: due ? 'border:2px solid var(--pink)' : '' },
+    el('div', { class: 'bubble-e' }, r.emoji),
+    el('button', { class: 'grow', style: 'background:none;text-align:right;padding:0', onclick: () => remMenu(r) },
+      el('div', { class: 'title', style: r.on ? '' : 'color:var(--gray)' }, r.title),
+      el('div', { class: 'muted' }, '⏱ ' + intervalText(r.interval) + '  •  ' + (r.on ? (due ? 'الآن!' : 'التالي: ' + whenText(r.next)) : 'متوقف')),
+      el('div', { class: 'muted', style: 'color:var(--pink)' }, '✅ اليوم: ' + r.today + '   •   المجموع: ' + r.total)),
+    el('button', { class: 'btn', disabled: !r.on, onclick: () => remDone(r) }, 'تم ✓'));
+  return card;
+}
+function remDone(r) {
+  const key = new Date().toDateString();
+  if (r.todayDate !== key) { r.todayDate = key; r.today = 0; }
+  r.today++; r.total++; r.next = quietAdjust(now() + r.interval * 6e4); save();
+  const praise = ['أحسنتِ يا ملكة ❤️', 'زوجك محظوظ بكِ 💕', 'ما أجمل حبكما 🥰', 'زوجة رائعة! 🌹', 'الحب يكبر كل يوم 💖'];
+  toast(praise[Math.floor(Math.random() * praise.length)]);
+  if (S.tellPartner !== false) notifyPartner('done', r.emoji + ' ' + S.name, 'أنجزت من أجلك: ' + r.title + ' 💕');
+  renderTab();
+}
+function remMenu(r) {
+  choose(r.emoji + ' ' + r.title, ['⏱ تغيير التكرار', r.on ? '⏸️ إيقاف' : '▶️ تشغيل', '🗑️ حذف', '➕ تذكير جديد'], i => {
+    if (i === 0) choose('⏱ كم مرة؟', INTERVALS.map(intervalText), j => { r.interval = INTERVALS[j]; r.next = quietAdjust(now() + r.interval * 6e4); save(); renderTab(); });
+    else if (i === 1) { r.on = !r.on; if (r.on) r.next = quietAdjust(now() + r.interval * 6e4); save(); renderTab(); }
+    else if (i === 2) confirmSheet('حذف التذكير؟', r.title, 'حذف', () => { S.myReminders = S.myReminders.filter(x => x.id !== r.id); save(); renderTab(); });
+    else addReminder();
+  });
+}
+function addReminder() {
+  const emoji = el('input', { class: 'field', value: '💗' });
+  const title = el('input', { class: 'field', placeholder: 'نص التذكير' });
+  sheet('➕ تذكير جديد', el('div', {}, emoji, title), [{ label: 'التالي: التكرار', fn: () => {
+    const t = title.value.trim(); if (!t) return; closeSheet();
+    choose('⏱ كم مرة؟', INTERVALS.map(intervalText), j => {
+      const list = myReminders();
+      list.unshift({ id: newId(list), emoji: emoji.value.trim() || '💗', title: t, interval: INTERVALS[j], next: quietAdjust(now() + INTERVALS[j] * 6e4), today: 0, todayDate: '', total: 0, on: true });
+      save(); renderTab();
+    });
+  } }, { label: 'إلغاء', ghost: true, fn: closeSheet }]);
+}
+let lastDueCount = -1;
+function checkDue() {
+  if (!linked()) return;
+  const due = myReminders().filter(r => r.on && r.next <= now());
+  if (due.length && due.length !== lastDueCount && tab !== 'mine') toast('⏰ ' + due[0].emoji + ' ' + due[0].title + (due.length > 1 ? ' (+' + (due.length - 1) + ')' : ''));
+  lastDueCount = due.length;
+  if (tab === 'mine' && !editing() && !$('#sheet').classList.contains('open')) renderTab();
+}
+
+// ====================================================================
+// start
+// ====================================================================
+if ('serviceWorker' in navigator && !CFG.q) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.addEventListener('message', e => { if (e.data && e.data.tab) go(e.data.tab); });
+}
+document.addEventListener('visibilitychange', () => {
+  if (!linked()) return;
+  if (document.visibilityState === 'visible') { streams.forEach(s => s.restart()); presence(true); renderTab(); checkDue(); }
+  else presence(false);
+});
+setInterval(() => { if (tab === 'chat') updateChatHeader(); }, 4000);
+setInterval(() => { if (document.visibilityState === 'visible') presence(true); }, 60000);
+setInterval(checkDue, 30000);
+swAuth();
+render();
+if (linked()) { startStreams(); presence(true); setTimeout(checkDue, 1500); }
+</script>
+</body>
+</html>
