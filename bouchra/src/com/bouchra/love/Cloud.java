@@ -537,6 +537,8 @@ public class Cloud {
             if (m.contains("WEAK_PASSWORD")) return "كلمة السر قصيرة: 6 أحرف على الأقل";
             if (m.contains("INVALID_EMAIL")) return "البريد الإلكتروني غير صحيح";
             if (m.contains("OPERATION_NOT_ALLOWED")) return "فعّل «Email/Password» في Firebase Authentication";
+            if (m.contains("CONFIGURATION_NOT_FOUND"))
+                return "خدمة الحسابات غير مفعّلة بعد: في Firebase افتح Authentication واضغط «Get started» ثم فعّل Email/Password";
             if (m.contains("API key not valid") || m.contains("API_KEY_INVALID")) return "مفتاح API غير صحيح";
             if (m.contains("TOO_MANY_ATTEMPTS")) return "محاولات كثيرة، انتظر قليلاً";
             if (m.contains("Permission denied")) return "رُفض الوصول: تحقق من قواعد قاعدة البيانات (Rules)";
