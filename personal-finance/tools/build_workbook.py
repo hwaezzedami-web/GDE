@@ -308,15 +308,25 @@ settings_rows = [
     ("SALARY_USD", "Monthly salary (USD) - الراتب الشهري (دولار)", 2700, "in", FMT_USD_U,
      "From you: 2,700 USD, paid in EUR to your euro bank account. - من عندك"),
     ("USD_EUR_MANUAL", "USD → EUR rate, manual - سعر تحويل الدولار ← أورو (يدوي)", 0.909, "in", FMT_RATE4,
-     "≈1.10 USD per EUR in mid-Nov 2026 (Trading Economics), so 1 USD ≈ 0.909 EUR. Put your bank's real rate."),
-    ("USD_EUR_LIVE", "USD → EUR rate, live (ECB) - السعر المباشر (البنك الأوروبي)", ECB, "auto", FMT_RATE4,
-     "Automatic in Excel for Windows 2013+ (WEBSERVICE). On phone / Mac / LibreOffice it shows n/a and the manual rate is used."),
-    ("USE_LIVE", "Use live rate when available? - استعمال السعر المباشر؟", "Yes - نعم", "key", None, "Yes = live ECB rate, No = manual rate above."),
-    ("USD_EUR", "USD → EUR rate USED - السعر المستعمل", '=IF(AND(LEFT(USE_LIVE,3)="Yes",ISNUMBER(USD_EUR_LIVE)),USD_EUR_LIVE,USD_EUR_MANUAL)', "auto", FMT_RATE4, ""),
+     "≈1.10 USD per EUR in mid-Nov 2026 (Trading Economics), so 1 USD ≈ 0.909 EUR. Used when no automatic rate is available."),
+    ("OFFICIAL_EUR_MANUAL", "Official EUR → DZD, manual - السعر الرسمي للأورو (يدوي)", 151, "in", FMT_RATE,
+     "≈151 DZD per EUR on 16 Nov 2026 (Bank of Algeria, via Observalgerie). Used when no automatic rate is available."),
+    ("USE_LIVE", "Use automatic rates when available? - استعمال الأسعار التلقائية؟", "Yes - نعم", "key", None,
+     "Yes = automatic official rates (Google Sheets / Excel Windows). No = always the manual numbers above."),
+    ("USD_EUR_GOOGLE", "USD → EUR, automatic in Google Sheets - تلقائي في Google Sheets",
+     '=IFERROR(GOOGLEFINANCE("CURRENCY:USDEUR"),"n/a")', "auto", FMT_RATE4,
+     "Updates by itself on Google's servers (phone or browser, laptop off). Shows n/a in Excel - يظهر n/a في Excel"),
+    ("USD_EUR_LIVE", "USD → EUR, automatic in Excel for Windows - تلقائي في Excel ويندوز", ECB, "auto", FMT_RATE4,
+     "European Central Bank rate, Excel 2013+ on Windows (WEBSERVICE). Shows n/a on phone, Mac and Google Sheets."),
+    ("OFFICIAL_EUR_GOOGLE", "Official EUR → DZD, automatic in Google Sheets - الرسمي تلقائي",
+     '=IFERROR(GOOGLEFINANCE("CURRENCY:EURDZD"),"n/a")', "auto", FMT_RATE, "Google Sheets only - في Google Sheets فقط"),
+    ("USD_EUR", "USD → EUR rate USED - سعر التحويل المستعمل",
+     '=IF(LEFT(USE_LIVE,3)="Yes",IF(ISNUMBER(USD_EUR_GOOGLE),USD_EUR_GOOGLE,IF(ISNUMBER(USD_EUR_LIVE),USD_EUR_LIVE,USD_EUR_MANUAL)),USD_EUR_MANUAL)',
+     "auto", FMT_RATE4, "Automatic rate if available, otherwise the manual one."),
+    ("OFFICIAL_EUR", "Official EUR → DZD USED - السعر الرسمي المستعمل",
+     '=IF(AND(LEFT(USE_LIVE,3)="Yes",ISNUMBER(OFFICIAL_EUR_GOOGLE)),OFFICIAL_EUR_GOOGLE,OFFICIAL_EUR_MANUAL)', "auto", FMT_RATE, ""),
     ("BANK_FEE", "Bank conversion fee (%) - عمولة البنك على التحويل", 0, "in", "0.00%",
      "If your bank keeps e.g. 1% when converting USD→EUR, type 1%. - إذا كان البنك يأخذ عمولة"),
-    ("OFFICIAL_EUR", "Official EUR → DZD (Bank of Algeria) - السعر الرسمي", 151, "in", FMT_RATE,
-     "≈151 DZD per EUR on 16 Nov 2026 (Bank of Algeria, via Observalgerie). Update from time to time."),
     ("DUE_SOON_DAYS", "'Due soon' alert for debts (days) - تنبيه الديون قبل (أيام)", 7, "in", "0", ""),
     ("§", "Market numbers (automatic) - أرقام السوق (تلقائي)"),
     ("RATE_DATE", "Last rate date - تاريخ آخر سعر", '=SUMPRODUCT(MAX((R_EUR<>"")*R_DATE))', "auto", FMT_DATE, "Newest date in Rates that has a EUR price."),
@@ -1404,38 +1414,34 @@ for sh, en, ar in [
     ws.row_dimensions[r].height = 30
     r += 1
 r += 1
-g_head("4. Real-time square price - سعر السكوار المباشر")
-g_row("Why manual?", "The square (black-market) price has no official live source, so Excel cannot download it by itself. "
-      "One line per day is enough: every sheet uses the newest price automatically.",
-      "سعر السكوار ليس له مصدر رسمي مباشر، لذلك لا يستطيع Excel جلبه وحده. سطر واحد في اليوم يكفي: كل الأوراق تستعمل آخر سعر تلقائيا.", h=48)
-g_row("Option A", "Each morning, check an app or page that publishes the square price (for example the 'Dinar Plus' app, "
-      "or Algerian news sites) and type it in Rates. 10 seconds.",
-      "كل صباح، تحقق من تطبيق أو صفحة تنشر سعر السكوار (مثل تطبيق 'دينار بلس' أو مواقع الأخبار) واكتبه في الأسعار. 10 ثوان.", h=48)
-g_row("Option B: bot", "Telegram bot: from your phone send  /rate 277 279  and the bot writes it in this file for you (see section 5).",
-      "بوت تيليغرام: من هاتفك أرسل  /rate 277 279  والبوت يكتبه في الملف (انظر القسم 5).", h=34)
-g_row("Option C", "Google Sheets: upload this file to Google Drive and open it with Google Sheets. There, IMPORTXML can read a rates web page "
-      "automatically every hour.",
-      "Google Sheets: ارفع الملف إلى Google Drive وافتحه بـ Google Sheets، هناك دالة IMPORTXML تقرأ صفحة الأسعار تلقائيا كل ساعة.", h=48)
-g_row("USD → EUR", "The official USD → EUR rate IS automatic in Excel for Windows (Settings → live ECB rate). Press Ctrl+Alt+F9 to refresh.",
-      "سعر الدولار ← أورو الرسمي تلقائي في Excel على ويندوز (الإعدادات ← السعر المباشر). اضغط Ctrl+Alt+F9 للتحديث.", h=34)
+g_head("4. Does the price change by itself? - هل يتغير السعر وحده؟")
+g_row("Square price\nسعر السكوار", "NO. Nobody publishes the square (black-market) price as a live feed (apps like Dinar Plus get it from the traders), "
+      "so no Excel file can download it. You type it ONCE a day in Rates: date + price, 10 seconds.",
+      "لا. لا يوجد أي مصدر مباشر لسعر السكوار (التطبيقات مثل دينار بلس تأخذه من الصرافين)، لذلك لا يستطيع أي ملف جلبه وحده. "
+      "تكتبه مرة واحدة في اليوم في ورقة الأسعار: التاريخ + السعر، 10 ثوان.", h=62)
+g_row("Then everything\nبعدها كل شيء", "After you type it, EVERYTHING updates by itself: salary in DZD, EUR in bank, EUR debts, savings, zakat, "
+      "the ▲▼ change and the charts. Example: today 277 → salary 679,841 DZD. Tomorrow you type 279 → salary 684,750 DZD and change ▲ +2.00.",
+      "بعد كتابته كل شيء يتحدث وحده: الراتب بالدينار، الأورو في البنك، الديون بالأورو، المدخرات، الزكاة، التغير ▲▼ والرسوم. "
+      "مثال: اليوم 277 ← الراتب 679,841 دج. غدا تكتب 279 ← الراتب 684,750 دج والتغير ▲ +2.00.", h=62)
+g_row("USD → EUR\nالدولار ← الأورو", "YES, automatic (official rate) in Google Sheets (phone or browser, laptop off) and in Excel for Windows. "
+      "In the Excel phone app it uses the number in Settings. Your bank decides the real rate anyway: type the EUR you really received in Salary.",
+      "نعم تلقائي (السعر الرسمي) في Google Sheets (الهاتف أو المتصفح والحاسوب مطفأ) وفي Excel على ويندوز. "
+      "في تطبيق Excel على الهاتف يستعمل الرقم المكتوب في الإعدادات. البنك يحدد السعر الحقيقي: اكتب الأورو الذي وصلك فعلا في ورقة الراتب.", h=62)
+g_row("Official EUR → DZD\nالسعر الرسمي", "Automatic in Google Sheets only. Elsewhere it uses the number in Settings (it moves slowly: update it once a month).",
+      "تلقائي في Google Sheets فقط. غير ذلك يستعمل الرقم في الإعدادات (يتغير ببطء: حدّثه مرة في الشهر).", h=40)
 r += 1
-g_head("5. Telegram bot - بوت تيليغرام  (file: bot/finance_bot.py)")
-for k_, en, ar in [
-    ("1. Create", "In Telegram open @BotFather → send /newbot → choose a name → copy the TOKEN it gives you.",
-     "في تيليغرام افتح @BotFather ← أرسل /newbot ← اختر اسما ← انسخ الرمز (TOKEN)."),
-    ("2. Your ID", "Open @userinfobot to get your Telegram ID (a number). Do the same for Bouchra if she will use it.",
-     "افتح @userinfobot لمعرفة رقمك في تيليغرام. نفس الشيء لبشرى إن أرادت استعماله."),
-    ("3. Install", "On your PC install Python 3.10+ (python.org). Open a terminal in the bot folder and run:  pip install -r requirements.txt",
-     "ثبت Python 3.10+ على حاسوبك، افتح الطرفية في مجلد البوت واكتب:  pip install -r requirements.txt"),
-    ("4. Run", "Set BOT_TOKEN, ALLOWED_USER_IDS and EXCEL_PATH (see bot/README.md), then run:  python finance_bot.py",
-     "اضبط BOT_TOKEN و ALLOWED_USER_IDS و EXCEL_PATH (انظر README)، ثم شغّل:  python finance_bot.py"),
-    ("5. Use", "/rate 277 279 · /sell 500 277 · /spend 2500 food bread · /income 10000 gift · /give 15000 brother Karim · "
-     "/lend 20000 Yacine 2026-12-31 · /borrow 50000 Karim · /pay D001 20000 · /save 50000 G01 · /summary · /debts",
-     "نفس الأوامر بالأعلى: سعر، بيع، مصروف، دخل، مساعدة، سلّفت، تسلفت، تسديد، ادخار، ملخص، الديون."),
-    ("Important", "Close the Excel file while the bot writes (Excel locks open files). To run 24/7, use an always-on PC or a small server.",
-     "أغلق ملف Excel عندما يكتب البوت (Excel يقفل الملف المفتوح). للتشغيل 24/24 استعمل حاسوبا دائم التشغيل أو خادما صغيرا."),
-]:
-    g_row(k_, en, ar, h=48)
+g_head("5. Use it on your phone, laptop off - على الهاتف بدون حاسوب")
+g_row("Option 1\nExcel app", "Put this file in OneDrive. Install the free Microsoft Excel app on your phone and open the file from OneDrive. "
+      "Type the rate and expenses from anywhere. Share the file with Bouchra so she can add her expenses too.",
+      "ضع الملف في OneDrive. ثبّت تطبيق Microsoft Excel المجاني على الهاتف وافتح الملف منه. اكتب السعر والمصاريف من أي مكان. "
+      "شارك الملف مع بشرى لتضيف مصاريفها أيضا.", h=62)
+g_row("Option 2\nGoogle Sheets", "Upload this file to Google Drive → open it → File → Save as Google Sheets. Use the free Google Sheets app. "
+      "The official USD→EUR and EUR→DZD rates then update by themselves on Google's servers. Share it with Bouchra.",
+      "ارفع الملف إلى Google Drive ← افتحه ← ملف ← حفظ بتنسيق Google Sheets. استعمل تطبيق Google Sheets المجاني. "
+      "الأسعار الرسمية تتحدث وحدها على خوادم Google. شاركه مع بشرى.", h=62)
+g_row("Missing dropdown\nقائمة ناقصة", "In Google Sheets, if a list arrow does not appear: select the column → Data → Data validation → Dropdown (from a range) "
+      "→ pick the list in the Settings sheet.",
+      "في Google Sheets إذا لم تظهر القائمة المنسدلة: حدد العمود ← بيانات ← التحقق من صحة البيانات ← قائمة من نطاق ← اختر القائمة من ورقة الإعدادات.", h=48)
 r += 1
 g_head("6. Tips - نصائح")
 g_row("Filters", "Click the arrow in any header to filter (one person, one category, one month). Row 4 totals follow the filter.",

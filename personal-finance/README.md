@@ -19,14 +19,20 @@
 | Savings - الادخار | Money put aside for each goal, in DZD or EUR. EUR is valued at today's square price. |
 | Summary - الملخص | The last 12 months of money in and out. |
 | Zakat - الزكاة | A simple zakat calculator (nisab = 85 g of gold). |
-| Settings - الإعدادات | Salary, USD→EUR rate (a live ECB rate in Excel for Windows), the official rate, names, and all the dropdown lists. |
+| Settings - الإعدادات | Salary, USD→EUR rate (automatic in Google Sheets and in Excel for Windows), the official rate, names, and all the dropdown lists. |
 | Guide - الدليل | Step-by-step instructions in English and Arabic. |
 
 Rows marked **"Example - مثال"** are samples. Delete them before you start.
 
-## Telegram bot
+## Do the rates change by themselves?
 
-See [`bot/README.md`](bot/README.md).
+- **Square (black-market) price: no.** There is no public live feed that a spreadsheet can read (apps like Dinar Plus collect it from the traders), so you type it once a day in *Rates*. After that, every sheet updates by itself: salary in DZD, EUR in bank, EUR debts, savings, zakat and the charts.
+- **Official USD → EUR and EUR → DZD: yes.** They update by themselves in Google Sheets, on Google's servers, so it works with the laptop off. In Excel for Windows only USD → EUR updates by itself. Anywhere else, the workbook uses the numbers you type in *Settings*.
+
+## Use it on your phone (laptop off)
+
+- **Excel app:** put the file in OneDrive and open it with the free Microsoft Excel app.
+- **Google Sheets:** upload it to Google Drive, then choose *File → Save as Google Sheets*. Use the free Google Sheets app. The official rates update automatically.
 
 ## Rebuild the workbook (optional)
 
