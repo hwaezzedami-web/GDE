@@ -164,6 +164,22 @@ input.big { font-family: var(--font-display); font-size: 22px; font-weight: 600;
 .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(90px + env(safe-area-inset-bottom, 0px)); z-index: 50; background: var(--ink); color: var(--bg);
   padding: 10px 16px; border-radius: 12px; font-size: 14px; max-width: calc(100% - 32px); box-shadow: var(--shadow); }
 .ro [data-write] { display: none !important; }
+.seg.five button { font-size: 12px; padding: 8px 2px; }
+.check { display: flex; gap: 10px; align-items: center; min-height: 40px; font-size: 15px; }
+.check input { width: 22px; height: 22px; accent-color: var(--accent); }
+input[type=time], input[type=password] { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 8px 10px; font-size: 16px; }
+.thumb { width: 72px; height: 72px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); cursor: zoom-in; }
+.photoview { position: fixed; inset: 0; z-index: 90; background: rgba(0, 0, 0, .9); display: grid; place-items: center; padding: 16px; }
+.photoview img { max-width: 100%; max-height: 100%; border-radius: 8px; }
+.lock { position: fixed; inset: 0; z-index: 100; background: var(--board); color: var(--board-ink); display: grid; place-items: center; padding: 24px; }
+.lock-in { display: grid; gap: 14px; justify-items: center; width: 100%; max-width: 320px; }
+.lock-in svg { width: 40px; height: 40px; }
+.lock .dots { display: flex; gap: 12px; direction: ltr; }
+.lock .dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--board-ink); }
+.lock .dots i.on { background: var(--board-ink); }
+.keypad { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; direction: ltr; }
+.keypad button { height: 64px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, .1); color: var(--board-ink); font-size: 24px; font-family: var(--font-display); cursor: pointer; }
+.lock .linkbtn { color: var(--board-dim); }
 .sel { user-select: all; -webkit-user-select: all; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: no-preference) { .sheet-in { animation: up .18s ease-out; } @keyframes up { from { transform: translateY(24px); opacity: .6; } } }
 @media (min-width: 600px) { main { padding-block: 20px; } }
@@ -185,10 +201,13 @@ input.big { font-family: var(--font-display); font-size: 22px; font-weight: 600;
 <div class="scrim" id="scrim" hidden data-act="close"></div>
 <section class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle"><div class="sheet-in" id="sheetBody"></div></section>
 <div class="toast" id="toast" hidden role="status"></div>
+<div class="lock" id="lock" hidden></div>
+<div class="photoview" id="photoView" hidden data-act="photoclose"><img id="photoImg" alt=""></div>
 
 <script>
 (function () {
 "use strict";
+const IS_APP = !!window.AndroidWallet;
 
 /* ------------------------------------------------------------------ icons */
 const I = {
@@ -226,11 +245,29 @@ const L = {
     rateNote: "The square price has no live source on the internet that apps can read. Add it once a day and every number updates.",
     chartTitle: "Price, last 60 days", stats: "Price statistics", avg7: "7-day average", avg30: "30-day average", low30: "30-day low", high30: "30-day high", premium: "Above official rate",
     converter: "Converter", eurToDa: "Euros you sell", daToEur: "Dinars to change", usdToDa: "Dollars you sell", history: "History", official: "Official",
-    seg: { salary: "Salary", sales: "Conversions", months: "12 months", exp: "Expenses", rel: "Relatives", bud: "Budget", open: "Open", paid: "Paid", all: "All" },
+    seg: { fixed: "Monthly", report: "Report", salary: "Salary", sales: "Conversions", months: "12 months", exp: "Expenses", rel: "Relatives", bud: "Budget", open: "Open", paid: "Paid", all: "All" },
     calc: "Salary value", atOfficial: "At the official rate", extra: "Extra from the square", salaryEur: "Salary in euros", addSalary: "Record a salary",
     eurFixLabel: "How many euros are in your bank now?", eurFixNote: "Type what your bank app shows today. Salaries that have not arrived yet are added on their day.",
     startT: "Start here", startNote: "Type what you have today: the euros in your bank and the dinars in your hand. From then on the app follows every change.",
     startEur: "Euros in my bank", startDa: "Dinars in my hand", pendingSal: "+{v} arrives {d}",
+    runT: "Your dinars", runDays: "last about {n} days (until {d})", runRate: "You spend about {v} a day (last 30 days).", runEmpty: "No dinars left: convert some euros.",
+    runConvert: "Convert before {d}. For one month you need about {v} (≈ {e}).", runOk: "Enough for now.", runNoData: "Add a few expenses and the app will tell you how long your dinars last.",
+    adviceGood: "Good price: {p}% above the 30-day average", adviceWait: "Low price: {p}% under the 30-day average. Wait if you can", adviceNormal: "Normal price, close to the 30-day average", adviceFew: "Add prices for 5 days to get advice",
+    place: { cash: "Cash", ccp: "CCP / BaridiMob", bank: "Bank (DZD)" }, addMove: "Move dinars", moveHint: "For example: you took cash out of your CCP account at the post office.",
+    billsT: "Monthly expenses due", billPaid: "Paid", billSkip: "Skip this month", billSkipped: "Skipped this month", billPaidMsg: "Recorded · dinars in hand now: {v}", addBill: "Add a monthly expense",
+    billDay: "every month on day {d}", billNext: "next {d}", billDone: "paid this month", billDue: "due", billOff: "paused", emptyBills: "Rent, internet, your mother's monthly support: add them once and the app reminds you every month.",
+    vsLast: "{m}", moreThan: "{p}% more than last month", lessThan: "{p}% less than last month", sameAs: "About the same as last month", byCat: "By category", noData: "No spending this month or last month.",
+    photoT: "Receipt photo", photoAdd: "Add a photo of the receipt", photoRemove: "Remove", photoNote: "Photos stay on this phone; they are not in the backup file.",
+    notifyT: "Notifications", notifyNote: "The phone reminds you even when the app is closed.", notifyOn: "Notifications on", notifyTime: "Time of the reminders", offS: "Off",
+    nk: { rate: "Square price every morning", salary: "Salary day", debts: "Debts to return or collect", bills: "Monthly expenses", backup: "Monthly backup", low: "Dinars running low" },
+    pinT: "PIN lock", pinNote: "Asks for a code each time you open the app.", pinOnS: "On", pinSet: "Set a PIN", pinChange: "Change PIN", pinRemove: "Remove PIN",
+    pinNew: "New PIN (4 to 6 digits)", pinAgain: "Type the new PIN again", pinCurrent: "Current PIN", pinWrong: "Wrong PIN", pinMismatch: "The two PINs are different", pinBad: "Use 4 to 6 digits",
+    pinEnter: "Enter your PIN", pinForgot: "Forgot the PIN?", pinForgotNote: "Without the PIN the data can't be opened. You can erase this phone's data and then restore your last backup file.",
+    pinErase: "Erase the data on this phone", pinEraseConfirm: "Tap again to erase everything", pinSaved: "PIN saved", pinRemoved: "PIN removed",
+    yes: "Yes", no: "No", noRateShort: "No price yet",
+    nChannel: "Wallet reminders", nRateT: "Square price", nRate: "Add today's euro price at the square.", nSalaryT: "Salary day", nSalary: "{m} salary should arrive today. Check your bank.",
+    nSalaryAdd: "{m} salary should arrive today. Record it in the wallet.", nDebtT: "Debt", nOwe: "Return {v} to {p}", nOwed: "{p} should return {v}", nInDays: "in {n} days.", nToday: "today.", nLate: "(late).",
+    nBackupT: "Backup", nBackup: "Save a backup file of the wallet (Settings → Backup).", nLowT: "Dinars running low", nLow: "Your dinars last until about {d}. Convert some euros.", nBillT: "Monthly expense", nBill: "{n}: {v} is due today.",
     totalT: "All your money in dinars", totalSub: "{e} in bank + {d} in hand", cashNeg: "More spent than converted: add the euros you converted",
     inHandNow: "Dinars in hand: {a} → after this: {b}", savedLeft: "Saved · dinars in hand now: {v}", budgetLeft: "Left in the budget", leftV: "{v} left", overV: "{v} over",
     salaryFor: "Salary for {m}", receivedOn: "received {d}", expectedOn: "expected {d}", nextSalary: "Next salary", nextSalaryLine: "{m} salary · {d}",
@@ -261,13 +298,13 @@ const L = {
     deleted: "Deleted", alsoPayments: "Its {n} payments are deleted too.", alsoSavings: "Its {n} savings are deleted too.",
     empty: { rates: "No prices yet.", expenses: "No expenses this month. Add the first one.", help: "No help recorded this month.", debts: "No debts here. When you lend or borrow money, add it.",
       goals: "No goals yet. Umrah, a car, a house, an emergency fund: add the first one.", salary: "No salary months yet. Add one when your salary arrives.", sales: "No sales yet. Add a line each time you sell euros." },
-    f: { needDa: "Dinars I need (optional)", date: "Date", eur: "EUR → DA, you sell (the main price)", eurBuy: "EUR price, you buy (optional)", usd: "USD → DA, you sell (optional)", note: "Note", month: "Salary for the month of", received: "Date it arrived in the bank",
+    f: { needDa: "Dinars I need (optional)", day: "Day of the month (1–31)", rkind: "What is it", saleTo: "Dinars go to", from: "From", to: "To", active: "Active", date: "Date", eur: "EUR → DA, you sell (the main price)", eurBuy: "EUR price, you buy (optional)", usd: "USD → DA, you sell (optional)", note: "Note", month: "Salary for the month of", received: "Date it arrived in the bank",
       usdAmt: "Salary (USD)", usdEur: "USD → EUR rate", eurReal: "EUR actually received (optional)", cur: "Currency", amount: "Amount", rate: "Rate you got (DA)", place: "Place or buyer",
       kind: "Type", who: "Who", cat: "Category", desc: "Description", pay: "Paid with", name: "Name", rel: "Relation", htype: "Kind of help", dir: "Type", person: "Person", phone: "Phone",
       due: "Planned return date", target: "Target amount (DA)", start: "Start date", goalDue: "Target date", prio: "Priority", goal: "Goal", kept: "Where the money is", savAmt: "Amount (use − to take out)", budgetAmt: "Monthly budget (DA)" },
-    form: { rate: "Square price", salary: "Salary month", sale: "Convert to dinars", expense: "Expense or income", help: "Help for relatives", debt: "Debt", payment: "Payment", goal: "Goal", saving: "Saving", budget: "Budget" },
+    form: { recurring: "Monthly expense", move: "Move dinars", rate: "Square price", salary: "Salary month", sale: "Convert to dinars", expense: "Expense or income", help: "Help for relatives", debt: "Debt", payment: "Payment", goal: "Goal", saving: "Saving", budget: "Budget" },
     eurHint: "Example: 277 means 1 € = 277 DA (100 € = 27,700 DA).",
-    dirs: { owe: "I owe (I borrowed)", owed: "Owed to me (I lent)" }, kinds: { expense: "Expense", income: "Income" },
+    dirs: { owe: "I owe (I borrowed)", owed: "Owed to me (I lent)" }, kinds: { expense: "Expense", income: "Income" }, rkinds: { expense: "Family expense", help: "Help for a relative" },
     cat: { food: "Food & groceries", rent: "Rent", power: "Electricity & gas", water: "Water", net: "Internet & phone", transport: "Transport & fuel", health: "Health & pharmacy", clothes: "Clothes",
       home: "Home & furniture", me: "Personal: {me}", wife: "Personal: {wife}", gifts: "Gifts & occasions", charity: "Charity & zakat", fun: "Outings", edu: "Education", other: "Other" },
     rel: { brother: "Brother", sister: "Sister", mother: "Mother", father: "Father", wmother: "Wife's mother", wfather: "Wife's late father (sadaqa for his soul)", wbrother: "Wife's brother", wsister: "Wife's sister",
@@ -294,11 +331,29 @@ const L = {
     rateNote: "سعر السكوار ليس له مصدر مباشر على الإنترنت تقرأه التطبيقات. أضفه مرة في اليوم وكل الأرقام تتحدث.",
     chartTitle: "السعر، آخر 60 يوما", stats: "إحصائيات السعر", avg7: "متوسط 7 أيام", avg30: "متوسط 30 يوما", low30: "أدنى سعر (30 يوما)", high30: "أعلى سعر (30 يوما)", premium: "فوق السعر الرسمي",
     converter: "محول العملات", eurToDa: "أورو تبيعه", daToEur: "دينار تريد صرفه", usdToDa: "دولار تبيعه", history: "السجل", official: "الرسمي",
-    seg: { salary: "الراتب", sales: "التحويلات", months: "12 شهرا", exp: "المصاريف", rel: "الأقارب", bud: "الميزانية", open: "مفتوحة", paid: "مسددة", all: "الكل" },
+    seg: { fixed: "الثابتة", report: "التقرير", salary: "الراتب", sales: "التحويلات", months: "12 شهرا", exp: "المصاريف", rel: "الأقارب", bud: "الميزانية", open: "مفتوحة", paid: "مسددة", all: "الكل" },
     calc: "قيمة الراتب", atOfficial: "بالسعر الرسمي", extra: "الفرق لصالحك من السكوار", salaryEur: "الراتب بالأورو", addSalary: "سجّل راتبا",
     eurFixLabel: "كم أورو في بنكك الآن؟", eurFixNote: "اكتب ما يظهر في تطبيق البنك اليوم. الرواتب التي لم تصل بعد تُضاف يوم وصولها.",
     startT: "ابدأ من هنا", startNote: "اكتب ما عندك اليوم: الأورو في البنك والدينار في يدك. بعدها التطبيق يتابع كل تغيير.",
     startEur: "الأورو في بنكي", startDa: "الدينار في يدي", pendingSal: "+{v} يصل {d}",
+    runT: "الدينار عندك", runDays: "يكفي حوالي {n} يوم (حتى {d})", runRate: "تصرف حوالي {v} في اليوم (آخر 30 يوما).", runEmpty: "لم يبق دينار: حوّل بعض الأورو.",
+    runConvert: "حوّل قبل {d}. لشهر كامل تحتاج حوالي {v} (≈ {e}).", runOk: "يكفي الآن.", runNoData: "أضف بعض المصاريف والتطبيق يخبرك كم يكفيك الدينار.",
+    adviceGood: "سعر جيد: أعلى من متوسط 30 يوما بـ {p}%", adviceWait: "سعر منخفض: أقل من متوسط 30 يوما بـ {p}%. انتظر إن استطعت", adviceNormal: "سعر عادي، قريب من متوسط 30 يوما", adviceFew: "أضف أسعار 5 أيام لتظهر النصيحة",
+    place: { cash: "نقدا في اليد", ccp: "الحساب البريدي / بريدي موب", bank: "البنك (دينار)" }, addMove: "نقل الدينار", moveHint: "مثلا: سحبت نقودا من حسابك البريدي في البريد.",
+    billsT: "مصاريف شهرية حان وقتها", billPaid: "دفعت", billSkip: "تخطّ هذا الشهر", billSkipped: "تم تخطي هذا الشهر", billPaidMsg: "تم التسجيل · الدينار عندك الآن: {v}", addBill: "أضف مصروفا شهريا ثابتا",
+    billDay: "كل شهر يوم {d}", billNext: "القادم {d}", billDone: "دُفع هذا الشهر", billDue: "حان وقته", billOff: "متوقف", emptyBills: "الكراء، الأنترنت، مصروف الوالدة: أضفها مرة واحدة والتطبيق يذكّرك كل شهر.",
+    vsLast: "{m}", moreThan: "أكثر من الشهر الماضي بـ {p}%", lessThan: "أقل من الشهر الماضي بـ {p}%", sameAs: "تقريبا مثل الشهر الماضي", byCat: "حسب الفئة", noData: "لا مصاريف هذا الشهر ولا الشهر الماضي.",
+    photoT: "صورة الفاتورة", photoAdd: "أضف صورة الفاتورة", photoRemove: "احذف", photoNote: "الصور تبقى في هذا الهاتف ولا تدخل في النسخة الاحتياطية.",
+    notifyT: "الإشعارات", notifyNote: "الهاتف يذكّرك حتى والتطبيق مغلق.", notifyOn: "تشغيل الإشعارات", notifyTime: "وقت التذكير", offS: "متوقف",
+    nk: { rate: "سعر السكوار كل صباح", salary: "يوم الراتب", debts: "الديون (إرجاع أو استلام)", bills: "المصاريف الشهرية", backup: "النسخة الاحتياطية كل شهر", low: "قرب نفاد الدينار" },
+    pinT: "القفل برمز", pinNote: "يطلب رمزا كلما فتحت التطبيق.", pinOnS: "مفعّل", pinSet: "ضع رمزا", pinChange: "غيّر الرمز", pinRemove: "احذف الرمز",
+    pinNew: "الرمز الجديد (4 إلى 6 أرقام)", pinAgain: "أعد كتابة الرمز الجديد", pinCurrent: "الرمز الحالي", pinWrong: "رمز خاطئ", pinMismatch: "الرمزان مختلفان", pinBad: "استعمل 4 إلى 6 أرقام",
+    pinEnter: "أدخل الرمز", pinForgot: "نسيت الرمز؟", pinForgotNote: "بدون الرمز لا يمكن فتح البيانات. يمكنك مسح بيانات هذا الهاتف ثم استرجاع آخر نسخة احتياطية.",
+    pinErase: "امسح بيانات هذا الهاتف", pinEraseConfirm: "اضغط مرة أخرى لمسح كل شيء", pinSaved: "تم حفظ الرمز", pinRemoved: "تم حذف الرمز",
+    yes: "نعم", no: "لا", noRateShort: "لا يوجد سعر",
+    nChannel: "تذكيرات المحفظة", nRateT: "سعر السكوار", nRate: "أضف سعر الأورو في السكوار اليوم.", nSalaryT: "يوم الراتب", nSalary: "راتب {m} يصل اليوم. تحقق من البنك.",
+    nSalaryAdd: "راتب {m} يصل اليوم. سجّله في المحفظة.", nDebtT: "دين", nOwe: "أرجع {v} إلى {p}", nOwed: "{p} يرجع لك {v}", nInDays: "بعد {n} أيام.", nToday: "اليوم.", nLate: "(متأخر).",
+    nBackupT: "نسخة احتياطية", nBackup: "احفظ نسخة احتياطية من المحفظة (الإعدادات ← نسخة احتياطية).", nLowT: "الدينار قارب على النفاد", nLow: "الدينار عندك يكفي حتى حوالي {d}. حوّل بعض الأورو.", nBillT: "مصروف شهري", nBill: "{n}: {v} موعده اليوم.",
     totalT: "كل مالك بالدينار", totalSub: "{e} في البنك + {d} عندك", cashNeg: "صرفت أكثر مما حوّلت: أضف الأورو الذي حوّلته",
     inHandNow: "الدينار عندك: {a} ← بعد هذا: {b}", savedLeft: "تم الحفظ · الدينار عندك الآن: {v}", budgetLeft: "المتبقي من الميزانية", leftV: "بقي {v}", overV: "تجاوز {v}",
     salaryFor: "راتب {m}", receivedOn: "وصل {d}", expectedOn: "متوقع {d}", nextSalary: "الراتب القادم", nextSalaryLine: "راتب {m} · {d}",
@@ -329,13 +384,13 @@ const L = {
     deleted: "تم الحذف", alsoPayments: "تُحذف معه {n} دفعات.", alsoSavings: "تُحذف معه {n} عمليات ادخار.",
     empty: { rates: "لا توجد أسعار بعد.", expenses: "لا مصاريف هذا الشهر. أضف أول مصروف.", help: "لا مساعدة مسجلة هذا الشهر.", debts: "لا ديون هنا. عندما تسلف أو تتسلف مالا أضفه.",
       goals: "لا أهداف بعد. عمرة، سيارة، سكن، صندوق طوارئ: أضف أول هدف.", salary: "لا رواتب بعد. أضف الشهر عند وصول الراتب.", sales: "لا عمليات بيع بعد. أضف سطرا كلما بعت الأورو." },
-    f: { needDa: "الدينار الذي أحتاجه (اختياري)", date: "التاريخ", eur: "سعر بيع 1 € بالدينار (السعر الأساسي)", eurBuy: "سعر شراء 1 € (اختياري)", usd: "سعر بيع 1 $ بالدينار (اختياري)", note: "ملاحظة", month: "راتب شهر", received: "تاريخ وصوله إلى البنك",
+    f: { needDa: "الدينار الذي أحتاجه (اختياري)", day: "يوم الشهر (1–31)", rkind: "ما هو", saleTo: "أين يذهب الدينار", from: "من", to: "إلى", active: "مفعّل", date: "التاريخ", eur: "سعر بيع 1 € بالدينار (السعر الأساسي)", eurBuy: "سعر شراء 1 € (اختياري)", usd: "سعر بيع 1 $ بالدينار (اختياري)", note: "ملاحظة", month: "راتب شهر", received: "تاريخ وصوله إلى البنك",
       usdAmt: "الراتب (دولار)", usdEur: "سعر تحويل الدولار ← الأورو", eurReal: "الأورو المستلم فعلا (اختياري)", cur: "العملة", amount: "المبلغ", rate: "السعر الذي أخذته (دج)", place: "المكان أو المشتري",
       kind: "النوع", who: "من", cat: "الفئة", desc: "الوصف", pay: "طريقة الدفع", name: "الاسم", rel: "القرابة", htype: "نوع المساعدة", dir: "النوع", person: "الشخص", phone: "الهاتف",
       due: "تاريخ الإرجاع المخطط", target: "المبلغ المطلوب (دج)", start: "تاريخ البداية", goalDue: "التاريخ المستهدف", prio: "الأولوية", goal: "الهدف", kept: "أين المال", savAmt: "المبلغ (− للسحب)", budgetAmt: "الميزانية الشهرية (دج)" },
-    form: { rate: "سعر السكوار", salary: "راتب شهر", sale: "تحويل إلى دينار", expense: "مصروف أو دخل", help: "مساعدة الأقارب", debt: "دين", payment: "دفعة", goal: "هدف", saving: "ادخار", budget: "الميزانية" },
+    form: { recurring: "مصروف شهري ثابت", move: "نقل الدينار", rate: "سعر السكوار", salary: "راتب شهر", sale: "تحويل إلى دينار", expense: "مصروف أو دخل", help: "مساعدة الأقارب", debt: "دين", payment: "دفعة", goal: "هدف", saving: "ادخار", budget: "الميزانية" },
     eurHint: "مثال: 277 يعني 1 € = 277 دج (100 € = 27,700 دج).",
-    dirs: { owe: "عليّ (تسلفت)", owed: "لي (سلّفت)" }, kinds: { expense: "مصروف", income: "دخل" },
+    dirs: { owe: "عليّ (تسلفت)", owed: "لي (سلّفت)" }, kinds: { expense: "مصروف", income: "دخل" }, rkinds: { expense: "مصروف العائلة", help: "مساعدة قريب" },
     cat: { food: "المواد الغذائية", rent: "الكراء", power: "الكهرباء والغاز", water: "الماء", net: "الأنترنت والهاتف", transport: "النقل والوقود", health: "الصحة والدواء", clothes: "الملابس",
       home: "المنزل والأثاث", me: "مصاريف {me}", wife: "مصاريف {wife}", gifts: "الهدايا والمناسبات", charity: "الصدقة والزكاة", fun: "الخرجات", edu: "التعليم", other: "أخرى" },
     rel: { brother: "أخ", sister: "أخت", mother: "الأم", father: "الأب", wmother: "أم الزوجة", wfather: "أب الزوجة رحمه الله (صدقة على روحه)", wbrother: "أخ الزوجة", wsister: "أخت الزوجة",
@@ -351,8 +406,9 @@ const L = {
 
 /* ------------------------------------------------------------------ state */
 const DEFAULTS = { salaryUsd: 2700, usdEur: 0.909, fee: 0, official: 151, dueSoon: 7, meName: "Aboubakr", wifeName: "Bouchra", meNameAr: "أبوبكر", wifeNameAr: "بشرى",
-  budgets: {}, zakat: { cash: 0, gold: 0, goldPrice: 18000 }, cashAdjust: 0, eurAdjust: 0, payDay: 15, payLag: 1 };
-const COLLS = ["rates", "salary", "sales", "expenses", "help", "debts", "payments", "goals", "savings"];
+  budgets: {}, zakat: { cash: 0, gold: 0, goldPrice: 18000 }, cashAdjust: 0, eurAdjust: 0, payDay: 15, payLag: 1, cashAdjustBy: {},
+  notify: { on: true, time: "09:00", rate: true, salary: true, debts: true, bills: true, backup: true, low: true } };
+const COLLS = ["rates", "salary", "sales", "expenses", "help", "debts", "payments", "goals", "savings", "recurring", "moves"];
 const ROUTES = ["home", "rates", "money", "family", "debts", "plans", "prefs"];
 const store = {
   get(k, d) { try { const v = localStorage.getItem("wallet." + k); return v === null ? d : v; } catch (e) { return d; } },
@@ -482,22 +538,28 @@ function eurSub(bal, R) {
   return t("atRate", { v: da(bal * R.eur) }) + (p ? " · " + t("pendingSal", { v: eu(p.eur), d: dmy(p.date).slice(0, 5) }) : "");
 }
 function needsStart() {
-  return !S.data.sales.length && !num(S.cfg.eurAdjust) && !num(S.cfg.cashAdjust) && !S.data.salary.some((r) => recvDate(r) <= todayStr());
+  return !S.data.sales.length && !S.data.moves.length && !num(S.cfg.eurAdjust) && !num(S.cfg.cashAdjust) && !PLACES.some((k) => num((S.cfg.cashAdjustBy || {})[k])) && !S.data.salary.some((r) => recvDate(r) <= todayStr());
 }
 function startCard() {
   if (!needsStart()) return "";
   return `<section class="card stripe-warn" data-write><h2>${esc(t("startT"))}</h2><p class="small">${esc(t("startNote"))}</p>
     <div class="actions"><button class="btn" type="button" data-act="eurfix">${esc(t("startEur"))}</button><button class="btn ghost" type="button" data-act="cashfix">${esc(t("startDa"))}</button></div></section>`;
 }
-function cashInHand(withAdjust = true) {
-  const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
-  const conv = sum(S.data.sales, (x) => num(x.amount) * num(x.rate));
-  const income = sum(S.data.expenses.filter((x) => x.kind === "income"), (x) => num(x.amount));
-  const spent = sum(S.data.expenses.filter((x) => x.kind !== "income"), (x) => num(x.amount));
-  const help = sum(S.data.help, (x) => num(x.amount));
-  const saved = sum(S.data.savings.filter((x) => (x.cur || "DZD") === "DZD"), (x) => num(x.amount));
-  return conv + income - spent - help - saved + (withAdjust ? num(S.cfg.cashAdjust) : 0);
+const PLACES = ["cash", "ccp", "bank"];
+function placeOfPay(p) { return p === "baridimob" || p === "edahabia" ? "ccp" : p === "card" || p === "transfer" ? "bank" : "cash"; }
+function cashByPlace(withAdjust = true) {
+  const b = { cash: 0, ccp: 0, bank: 0 };
+  const add = (pl, v) => { b[PLACES.includes(pl) ? pl : "cash"] += v; };
+  for (const x of S.data.sales) add(x.to || "cash", num(x.amount) * num(x.rate));
+  for (const x of S.data.expenses) add(placeOfPay(x.pay), x.kind === "income" ? num(x.amount) : -num(x.amount));
+  for (const x of S.data.help) add(placeOfPay(x.pay), -num(x.amount));
+  for (const x of S.data.savings) if ((x.cur || "DZD") === "DZD") add(x.kept === "ccp" ? "ccp" : "cash", -num(x.amount));
+  for (const x of S.data.moves) { add(x.from || "cash", -num(x.amount)); add(x.to || "cash", num(x.amount)); }
+  if (withAdjust) { const A = S.cfg.cashAdjustBy || {}; for (const k of PLACES) b[k] += num(A[k]); b.cash += num(S.cfg.cashAdjust); }
+  return b;
 }
+function cashInHand(withAdjust = true) { const b = cashByPlace(withAdjust); return b.cash + b.ccp + b.bank; }
+const placesLine = (b) => PLACES.filter((k) => Math.round(b[k]) !== 0).map((k) => t("place." + k) + " " + nf(Math.round(b[k]))).join(" · ");
 function debtList(R) {
   const today = todayStr();
   const paidBy = {};
@@ -554,6 +616,295 @@ function rateStats(R) {
   return { avg7: avg(within(7)), avg30: avg(w30), low30: Math.min(...w30), high30: Math.max(...w30), premium: num(S.cfg.official) > 0 ? R.eur / num(S.cfg.official) - 1 : 0 };
 }
 
+/* ------------------------------------------------------------------ insights, bills, reminders */
+function dateAdd(s, n) { const d = new Date((dayNum(s) + n) * 864e5); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; }
+function spendRate() {
+  const end = dayNum(todayStr()), start = end - 29;
+  const outs = [...S.data.expenses.filter((x) => x.kind !== "income"), ...S.data.help].filter((x) => x.date);
+  if (!outs.length) return 0;
+  const first = Math.min(...outs.map((x) => dayNum(x.date)));
+  const days = Math.max(7, end - Math.max(start, first) + 1);
+  return outs.filter((x) => dayNum(x.date) >= start && dayNum(x.date) <= end).reduce((s, x) => s + num(x.amount), 0) / days;
+}
+function runway(R) {
+  const rate = spendRate(); if (rate <= 0) return null;
+  const cash = cashInHand(), today = todayStr(), days = Math.max(0, Math.floor(cash / rate));
+  const need30 = Math.max(0, rate * 30 - Math.max(0, cash));
+  return { cash, rate, days, until: dateAdd(today, days), convertBy: dateAdd(today, Math.max(0, days - 3)), need30, eur30: R.eur ? need30 / R.eur : 0 };
+}
+function priceAdvice(R) {
+  if (!R.date) return null;
+  const pts = R.list.filter((r) => { const d = daysBetween(r.date, R.date); return d >= 0 && d < 30; });
+  if (pts.length < 5) return { tone: "flat", text: t("adviceFew") };
+  const avg = pts.reduce((s, r) => s + num(r.eur), 0) / pts.length, diff = R.eur / avg - 1;
+  if (diff >= 0.005) return { tone: "up", text: t("adviceGood", { p: nf(diff * 100, 1) }) };
+  if (diff <= -0.005) return { tone: "down", text: t("adviceWait", { p: nf(-diff * 100, 1) }) };
+  return { tone: "flat", text: t("adviceNormal") };
+}
+function adviceRow(R) { const A = priceAdvice(R); return A ? `<div class="row"><span class="chip ${A.tone}" style="white-space:normal">${esc(A.text)}</span></div>` : ""; }
+function runwayCard(R) {
+  if (needsStart()) return "";
+  const W = runway(R);
+  if (!W) return `<section class="card"><h2>${esc(t("runT"))}</h2><p class="small muted">${esc(t("runNoData"))}</p></section>`;
+  if (W.cash <= 0) return `<section class="card stripe-bad"><h2>${esc(t("runT"))}</h2><p>${esc(t("runEmpty"))}</p><p class="small muted">${esc(t("runRate", { v: da(W.rate) }))}</p>
+    <button class="btn" type="button" data-write data-act="form" data-form="sale">${ic("sale")}${esc(t("addSale"))}</button></section>`;
+  const low = W.days <= 7;
+  return `<section class="card ${low ? "stripe-warn" : ""}"><h2>${esc(t("runT"))}: ${esc(t("runDays", { n: W.days, d: dmy(W.until) }))}</h2>
+    <p class="small muted">${esc(t("runRate", { v: da(W.rate) }))}</p>
+    ${low ? `<p class="small">${esc(t("runConvert", { d: dmy(W.convertBy), v: da(W.need30), e: eu(W.eur30) }))}</p>
+    <button class="btn" type="button" data-write data-act="form" data-form="sale">${ic("sale")}${esc(t("addSale"))}</button>` : `<p class="small">${esc(t("runOk"))}</p>`}</section>`;
+}
+function placesCard() {
+  const b = cashByPlace();
+  return `<section class="card"><h2>${esc(t("cashT"))}<button class="link" type="button" data-write data-act="cashfix">${esc(t("cashFix"))}</button></h2>
+    <dl class="kv">${PLACES.map((k) => `<dt>${esc(t("place." + k))}</dt><dd class="${b[k] < 0 ? "a bad" : ""}">${esc(da(b[k]))}</dd>`).join("")}</dl>
+    <button class="btn ghost block" type="button" data-write data-act="form" data-form="move" style="margin-top:10px">${ic("debts")}${esc(t("addMove"))}</button></section>`;
+}
+function billDate(ym, day) {
+  const [y, m] = ym.split("-").map(Number), last = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  return `${ym}-${pad(Math.min(Math.max(1, Math.round(num(day) || 1)), last))}`;
+}
+function paidBill(r, ym) {
+  return (r.kind === "help" ? S.data.help : S.data.expenses).some((x) => x.recurId === r.id && x.ym === ym) || (r.skipped || []).includes(ym);
+}
+function dueBills() {
+  const today = todayStr(), cur = today.slice(0, 7), out = [];
+  for (const r of S.data.recurring) {
+    if (r.active === "no") continue;
+    for (let m = r.start && r.start > addMonths(cur, -2) ? r.start : addMonths(cur, -2); m <= cur; m = addMonths(m, 1)) {
+      const d = billDate(m, r.day);
+      if (d <= today && !paidBill(r, m)) out.push({ r, ym: m, date: d });
+    }
+  }
+  return out.sort((a, b) => (a.date < b.date ? -1 : 1));
+}
+function billsCard() {
+  const due = dueBills(); if (!due.length) return "";
+  return `<section class="card stripe-warn"><h2>${esc(t("billsT"))}</h2><div class="list">${due.map((b) => `<div class="item" style="cursor:default">
+    <span class="t">${esc(b.r.name || "?")}</span><span class="a">${esc(da(b.r.amount))}</span>
+    <span class="m"><span class="num">${esc(dmy(b.date))}</span><span class="actions" data-write style="flex:1 1 100%;margin-top:6px">
+      <button class="btn" type="button" data-act="billpay" data-id="${esc(b.r.id)}" data-ym="${esc(b.ym)}">✓ ${esc(t("billPaid"))}</button>
+      <button class="btn ghost" type="button" data-act="billskip" data-id="${esc(b.r.id)}" data-ym="${esc(b.ym)}">${esc(t("billSkip"))}</button></span></span></div>`).join("")}</div></section>`;
+}
+async function billPay(id, ym) {
+  const r = S.data.recurring.find((x) => x.id === id); if (!r || paidBill(r, ym)) return;
+  const isHelp = r.kind === "help";
+  const after = cashAfter(isHelp ? "help" : "expense", num(r.amount), false, null).after;
+  const base = { date: todayStr(), amount: num(r.amount), who: r.who || S.me, pay: r.pay || "cash", recurId: r.id, ym };
+  const ok = isHelp ? await saveDoc("help", null, { ...base, name: r.name || "", rel: r.rel || "other", htype: r.htype || "monthly" })
+    : await saveDoc("expenses", null, { ...base, kind: "expense", cat: r.cat || "other", desc: r.name || "" });
+  if (ok) toast(t("billPaidMsg", { v: da(after) }));
+}
+async function billSkip(id, ym) {
+  const r = S.data.recurring.find((x) => x.id === id); if (!r) return;
+  const body = { ...r, skipped: [...(r.skipped || []), ym] }; delete body.id;
+  if (await saveDoc("recurring", id, body)) toast(t("billSkipped"));
+}
+function vFixed() {
+  const cur = todayStr().slice(0, 7), rows = S.data.recurring.slice().sort((a, b) => num(a.day) - num(b.day));
+  return `<button class="btn block" type="button" data-write data-act="form" data-form="recurring">${ic("plus")}${esc(t("addBill"))}</button>
+    <section class="card">${rows.length ? `<div class="list">${rows.map((r) => {
+      const d = billDate(cur, r.day);
+      const st = r.active === "no" ? ["neutral", t("billOff")] : paidBill(r, cur) ? ["good", t("billDone")] : d <= todayStr() ? ["warn", t("billDue")] : ["neutral", t("billNext", { d: dmy(d).slice(0, 5) })];
+      return `<button class="item" type="button" data-act="edit" data-form="recurring" data-id="${esc(r.id)}"><span class="t">${esc(r.name || "?")}</span><span class="a">${esc(da(r.amount))}</span>
+        <span class="m"><span>${esc(t("billDay", { d: num(r.day) || 1 }))}</span><span class="tag neutral">${esc(r.kind === "help" ? listLabel("rel", r.rel || "other") : listLabel("cat", r.cat || "other"))}</span>
+        <span class="tag ${st[0]}">${esc(st[1])}</span></span></button>`; }).join("")}</div>`
+      : empty("receipt", t("emptyBills"), 'data-act="form" data-form="recurring"', t("addBill"))}</section>`;
+}
+function vReport() {
+  const prevM = addMonths(S.month, -1);
+  const byCat = (ym) => { const o = {}; for (const x of S.data.expenses) if (ymOf(x.date) === ym && x.kind !== "income") { const k = x.cat || "other"; o[k] = (o[k] || 0) + num(x.amount); } return o; };
+  const A = byCat(S.month), B = byCat(prevM);
+  const totA = Object.values(A).reduce((s, v) => s + v, 0), totB = Object.values(B).reduce((s, v) => s + v, 0);
+  if (!totA && !totB) return `<section class="card">${empty("receipt", t("noData"))}</section>`;
+  const helpA = S.data.help.filter((x) => ymOf(x.date) === S.month).reduce((s, x) => s + num(x.amount), 0);
+  const change = totB > 0 ? (totA / totB - 1) * 100 : null;
+  const line = change === null ? "" : Math.abs(change) < 1 ? t("sameAs") : change > 0 ? t("moreThan", { p: nf(change) }) : t("lessThan", { p: nf(-change) });
+  const cats = Array.from(new Set([...Object.keys(A), ...Object.keys(B)])).sort((x, y) => (A[y] || 0) - (A[x] || 0));
+  const max = Math.max(1, ...cats.map((k) => Math.max(A[k] || 0, B[k] || 0)));
+  const who = { me: 0, wife: 0, both: 0 };
+  for (const x of S.data.expenses) if (ymOf(x.date) === S.month && x.kind !== "income") who[x.who in who ? x.who : "both"] += num(x.amount);
+  return `<div class="two"><div class="stat"><span class="k">${esc(t("spent"))}</span><span class="v">${esc(da(totA))}</span><span class="small muted">${esc(monthName(prevM))}: ${esc(da(totB))}</span></div>
+    <div class="stat"><span class="k">${esc(t("helpL"))}</span><span class="v">${esc(da(helpA))}</span></div></div>
+    ${line ? `<p class="banner ${change > 0 ? "" : "info"}">${esc(line)}</p>` : ""}
+    <section class="card"><h2>${esc(t("byCat"))}<span class="small muted"><span style="color:var(--accent)">■</span> ${esc(monthName(S.month))} · <span style="color:var(--muted)">■</span> ${esc(monthName(prevM))}</span></h2>
+      <div class="list">${cats.map((k) => { const a = A[k] || 0, b = B[k] || 0, d = b > 0 ? Math.round((a / b - 1) * 100) : null;
+        return `<div class="item" style="cursor:default"><span class="t">${esc(listLabel("cat", k))}</span><span class="a">${esc(da(a))}</span>
+          <span class="m" style="display:grid;gap:4px"><span class="bar"><i style="width:${((a / max) * 100).toFixed(1)}%"></i></span>
+          <span class="bar" style="height:5px"><i style="width:${((b / max) * 100).toFixed(1)}%;background:var(--muted)"></i></span>
+          <span class="num">${esc(da(b))}${d !== null ? ` · ${d > 0 ? "+" : ""}${d}%` : ""}</span></span></div>`; }).join("")}</div></section>
+    <section class="card"><h2>${esc(t("byPerson"))}</h2><dl class="kv">${["me", "wife", "both"].map((w) => `<dt>${esc(whoLabel(w))}</dt><dd>${esc(da(who[w]))}</dd>`).join("")}</dl></section>`;
+}
+function firstDataDate() { return [...S.data.expenses, ...S.data.rates, ...S.data.sales].map((x) => x.date).filter(Boolean).sort()[0] || ""; }
+function reminderPlan(R) {
+  const N = { ...DEFAULTS.notify, ...(S.cfg.notify || {}) }, on = N.on !== false;
+  const today = todayStr(), horizon = dayNum(today) + 62, ev = [];
+  const push = (date, title, text) => { if (date && date >= today && dayNum(date) <= horizon) ev.push({ date, title, text }); };
+  if (on && N.salary !== false) {
+    for (const r of S.data.salary) push(recvDate(r), t("nSalaryT"), t("nSalary", { m: monthName(r.month) }));
+    const U = nextUnrecorded(); push(U.date, t("nSalaryT"), t("nSalaryAdd", { m: monthName(U.month) }));
+  }
+  if (on && N.debts !== false) for (const d of debtList(R)) {
+    if (d.status === "paid" || !d.due) continue;
+    const v = nf(Math.max(0, d.rem), d.cur === "DZD" ? 0 : 2) + (d.cur === "EUR" ? " €" : d.cur === "USD" ? " $" : " " + t("da"));
+    const what = d.dir === "owe" ? t("nOwe", { v, p: d.person || "" }) : t("nOwed", { v, p: d.person || "" });
+    push(dateAdd(d.due, -num(S.cfg.dueSoon || 7)), t("nDebtT"), what + " " + t("nInDays", { n: num(S.cfg.dueSoon || 7) }));
+    push(d.due, t("nDebtT"), what + " " + t("nToday"));
+    push(dateAdd(d.due, 3), t("nDebtT"), what + " " + t("nLate"));
+  }
+  if (on && N.backup !== false) { const base = S.cfg.lastBackup || firstDataDate(); if (base) for (const k of [30, 37, 44]) push(dateAdd(base, k), t("nBackupT"), t("nBackup")); }
+  if (on && N.low !== false) { const W = runway(R); if (W && W.cash > 0) push(dateAdd(today, Math.max(0, W.days - 3)), t("nLowT"), t("nLow", { d: dmy(W.until) })); }
+  if (on && N.bills !== false) for (const r of S.data.recurring) {
+    if (r.active === "no") continue;
+    for (let k = 0; k < 3; k++) { const m = addMonths(today.slice(0, 7), k); if (!paidBill(r, m)) push(billDate(m, r.day), t("nBillT"), t("nBill", { n: r.name || "", v: da(r.amount) })); }
+  }
+  return { on, time: N.time || "09:00", rate: on && N.rate !== false, rateTitle: t("nRateT"), rateText: t("nRate"), channel: t("nChannel"), events: ev.slice(0, 300) };
+}
+let lastNative = "";
+function syncNative() {
+  const B = window.AndroidWallet; if (!B) return;
+  const R = rateInfo();
+  const widget = { title: t("wallet"), rate: R.eur ? `1 € = ${nf(R.eur, 2)} ${t("da")}` : t("noRateShort"), cash: `${t("cashT")}: ${da(cashInHand())}`,
+    eur: `${t("eurBank")}: ${eu(eurBalance())}`, date: R.date ? dmy(R.date) : "" };
+  const plan = reminderPlan(R), sig = JSON.stringify([plan, widget]);
+  if (sig === lastNative) return;
+  lastNative = sig;
+  try { if (B.setReminders) B.setReminders(JSON.stringify(plan)); if (B.updateWidget) B.updateWidget(JSON.stringify(widget)); } catch (e) { /* bridge refused */ }
+}
+
+/* ------------------------------------------------------------------ phone-only: notifications, PIN, photos */
+function notifyCard() {
+  const N = { ...DEFAULTS.notify, ...(S.cfg.notify || {}) };
+  const kinds = ["rate", "salary", "debts", "bills", "backup", "low"].filter((k) => N[k] !== false).map((k) => t("nk." + k));
+  return `<section class="card"><h2>${esc(t("notifyT"))}<button class="link" type="button" data-act="notify">${esc(t("edit"))}</button></h2>
+    <p class="small">${esc(N.on === false ? t("offS") : (N.time || "09:00") + " · " + kinds.join(S.lang === "ar" ? "، " : ", "))}</p><p class="small muted">${esc(t("notifyNote"))}</p></section>`;
+}
+function notifySheet() {
+  const N = { ...DEFAULTS.notify, ...(S.cfg.notify || {}) };
+  const row = (k, label, on) => `<label class="check"><input type="checkbox" id="nt_${k}"${on ? " checked" : ""}> ${esc(label)}</label>`;
+  return sheetHead(t("notifyT")) + `<form id="theForm" class="conv" novalidate>${row("on", t("notifyOn"), N.on !== false)}
+    <div class="field"><label for="nt_time">${esc(t("notifyTime"))}</label><input type="time" id="nt_time" value="${esc(N.time || "09:00")}"></div>
+    ${["rate", "salary", "debts", "bills", "backup", "low"].map((k) => row(k, t("nk." + k), N[k] !== false)).join("")}
+    <p class="small muted">${esc(t("notifyNote"))}</p><div class="actions"><button class="btn" type="submit">${esc(t("save"))}</button></div></form>`;
+}
+async function submitNotify() {
+  const g = (id) => document.getElementById(id);
+  const N = { on: g("nt_on").checked, time: g("nt_time").value || "09:00" };
+  for (const k of ["rate", "salary", "debts", "bills", "backup", "low"]) N[k] = g("nt_" + k).checked;
+  if (await saveCfg({ notify: N })) { toast(t("saved2")); closeSheet(); render(); }
+}
+function sha256(str) {
+  const K = [0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3, 0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174,
+    0xe49b69c1, 0xefbe4786, 0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da, 0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147, 0x06ca6351, 0x14292967,
+    0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13, 0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b, 0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208, 0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2];
+  let H = [0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19];
+  const bytes = new TextEncoder().encode(str), len = bytes.length, total = ((len + 9 + 63) >> 6) << 6;
+  const m = new Uint8Array(total); m.set(bytes); m[len] = 0x80;
+  const dv = new DataView(m.buffer); dv.setUint32(total - 4, (len * 8) >>> 0); dv.setUint32(total - 8, Math.floor((len * 8) / 4294967296));
+  const w = new Uint32Array(64), rot = (x, n) => (x >>> n) | (x << (32 - n));
+  for (let i = 0; i < total; i += 64) {
+    for (let j = 0; j < 16; j++) w[j] = dv.getUint32(i + j * 4);
+    for (let j = 16; j < 64; j++) {
+      const s0 = rot(w[j - 15], 7) ^ rot(w[j - 15], 18) ^ (w[j - 15] >>> 3), s1 = rot(w[j - 2], 17) ^ rot(w[j - 2], 19) ^ (w[j - 2] >>> 10);
+      w[j] = (w[j - 16] + s0 + w[j - 7] + s1) | 0;
+    }
+    let [a, b, c, d, e, f, g, h] = H;
+    for (let j = 0; j < 64; j++) {
+      const t1 = (h + (rot(e, 6) ^ rot(e, 11) ^ rot(e, 25)) + ((e & f) ^ (~e & g)) + K[j] + w[j]) | 0;
+      const t2 = ((rot(a, 2) ^ rot(a, 13) ^ rot(a, 22)) + ((a & b) ^ (a & c) ^ (b & c))) | 0;
+      h = g; g = f; f = e; e = (d + t1) | 0; d = c; c = b; b = a; a = (t1 + t2) | 0;
+    }
+    H = [H[0] + a | 0, H[1] + b | 0, H[2] + c | 0, H[3] + d | 0, H[4] + e | 0, H[5] + f | 0, H[6] + g | 0, H[7] + h | 0];
+  }
+  return H.map((x) => (x >>> 0).toString(16).padStart(8, "0")).join("");
+}
+const pinDigits = (s) => String(s || "").trim().replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x6f0);
+function pinCard() {
+  const has = !!S.cfg.pinHash;
+  return `<section class="card"><h2>${esc(t("pinT"))}<span class="tag ${has ? "good" : "neutral"}">${esc(has ? t("pinOnS") : t("offS"))}</span></h2><p class="small muted">${esc(t("pinNote"))}</p>
+    <div class="actions">${has ? `<button class="btn ghost" type="button" data-act="pin" data-mode="change">${esc(t("pinChange"))}</button>
+      <button class="btn danger" type="button" data-act="pin" data-mode="remove">${esc(t("pinRemove"))}</button>`
+      : `<button class="btn" type="button" data-act="pin" data-mode="set">${esc(t("pinSet"))}</button>`}</div></section>`;
+}
+function pinSheet(sh) {
+  const f = (id, label) => `<div class="field"><label for="${id}">${esc(label)}</label><input id="${id}" type="password" inputmode="numeric" autocomplete="off" maxlength="6"></div>`;
+  const parts = [];
+  if (S.cfg.pinHash) parts.push(f("pin_cur", t("pinCurrent")));
+  if (sh.mode !== "remove") parts.push(f("pin_new", t("pinNew")), f("pin_again", t("pinAgain")));
+  return sheetHead(t("pinT")) + `<form id="theForm" class="conv" novalidate>${parts.join("")}<div class="actions"><button class="btn${sh.mode === "remove" ? " danger" : ""}" type="submit">${esc(sh.mode === "remove" ? t("pinRemove") : t("save"))}</button></div></form>`;
+}
+async function submitPin() {
+  const sh = S.sheet, g = (id) => pinDigits((document.getElementById(id) || {}).value);
+  if (S.cfg.pinHash && sha256(S.cfg.pinSalt + g("pin_cur")) !== S.cfg.pinHash) return toast(t("pinWrong"));
+  if (sh.mode === "remove") { if (await saveCfg({ pinHash: "", pinSalt: "", pinLen: 0 })) { toast(t("pinRemoved")); closeSheet(); render(); } return; }
+  const a = g("pin_new"), b = g("pin_again");
+  if (!/^\d{4,6}$/.test(a)) return toast(t("pinBad"));
+  if (a !== b) return toast(t("pinMismatch"));
+  const salt = Math.random().toString(36).slice(2, 10);
+  if (await saveCfg({ pinHash: sha256(salt + a), pinSalt: salt, pinLen: a.length })) { toast(t("pinSaved")); closeSheet(); render(); }
+}
+function showLock() { if (!IS_APP || !S.cfg.pinHash) return; S.locked = true; S.pinEntry = ""; S.lockMsg = ""; S.lockForgot = false; S.eraseConfirm = false; renderLock(); }
+function renderLock() {
+  const el = document.getElementById("lock"); if (!el) return;
+  if (!S.locked) { el.hidden = true; el.innerHTML = ""; return; }
+  const len = num(S.cfg.pinLen) || 4;
+  const dots = Array.from({ length: len }, (_, i) => `<i class="${i < S.pinEntry.length ? "on" : ""}"></i>`).join("");
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"].map((k) => (k === "" ? "<span></span>"
+    : `<button type="button" data-act="pinkey" data-k="${k}" aria-label="${k === "del" ? "Delete" : k}">${k === "del" ? "⌫" : k}</button>`)).join("");
+  el.innerHTML = `<div class="lock-in">${ic("money")}<h2>${esc(t("pinEnter"))}</h2><div class="dots">${dots}</div><p class="small" aria-live="polite">${esc(S.lockMsg || "")}</p>
+    <div class="keypad">${keys}</div>${S.lockForgot ? `<p class="small" style="text-align:center">${esc(t("pinForgotNote"))}</p>
+    <button class="btn danger" type="button" data-act="pinerase">${esc(S.eraseConfirm ? t("pinEraseConfirm") : t("pinErase"))}</button>`
+    : `<button class="linkbtn" type="button" data-act="pinforgot">${esc(t("pinForgot"))}</button>`}</div>`;
+  el.hidden = false;
+}
+function pinKey(k) {
+  const len = num(S.cfg.pinLen) || 4;
+  if (k === "del") S.pinEntry = S.pinEntry.slice(0, -1); else if (S.pinEntry.length < len) S.pinEntry += k;
+  S.lockMsg = "";
+  if (S.pinEntry.length === len) {
+    if (sha256(S.cfg.pinSalt + S.pinEntry) === S.cfg.pinHash) { S.locked = false; S.pinEntry = ""; renderLock(); return; }
+    S.pinEntry = ""; S.lockMsg = t("pinWrong");
+  }
+  renderLock();
+}
+function pinErase() {
+  if (!S.eraseConfirm) { S.eraseConfirm = true; renderLock(); return; }
+  try { if (typeof LocalDB !== "undefined") LocalDB.importAll({ colls: {}, config: null }); } catch (e) { /* nothing to erase */ }
+  S.cfg = JSON.parse(JSON.stringify(DEFAULTS)); S.locked = false; S.eraseConfirm = false; S.lockForgot = false; renderLock(); render();
+}
+window.walletPause = () => { S.pausedAt = Date.now(); };
+window.walletResume = () => {
+  if (IS_APP && S.cfg.pinHash && S.pausedAt && Date.now() - S.pausedAt > 30000) showLock();
+  S.pausedAt = 0; render();
+};
+function photoField() {
+  return `<div class="field"><label>${esc(t("photoT"))}</label><div id="photoBox">${photoBoxHtml()}</div>
+    <input type="file" id="photoFile" accept="image/*" hidden><p class="small muted">${esc(t("photoNote"))}</p></div>`;
+}
+function photoBoxHtml() {
+  const p = S.sheet && S.sheet.photo;
+  return p ? `<div class="actions" style="align-items:center"><img src="${esc(p)}" alt="" class="thumb" data-act="photoview"><button class="btn ghost" type="button" data-act="photodel">${esc(t("photoRemove"))}</button></div>`
+    : `<button class="btn ghost block" type="button" data-act="photo">📷 ${esc(t("photoAdd"))}</button>`;
+}
+function updatePhotoBox() { const b = document.getElementById("photoBox"); if (b) b.innerHTML = photoBoxHtml(); }
+function readPhoto(file) {
+  if (!file || !S.sheet) return;
+  const fr = new FileReader();
+  fr.onload = () => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      if (S.sheet) { S.sheet.photo = c.toDataURL("image/jpeg", 0.72); S.sheet.photoChanged = true; updatePhotoBox(); }
+    };
+    img.src = fr.result;
+  };
+  fr.readAsDataURL(file);
+}
+document.addEventListener("change", (e) => { if (e.target && e.target.id === "photoFile") readPhoto(e.target.files && e.target.files[0]); });
+
 /* ------------------------------------------------------------------ views */
 function empty(icon, text, act, label) {
   return `<div class="empty">${ic(icon)}<p>${esc(text)}</p>${act ? `<button class="btn" type="button" data-write ${act}>${ic("plus")}${esc(label)}</button>` : ""}</div>`;
@@ -573,6 +924,7 @@ function board(R) {
     <div class="label"><span>${esc(t("boardLabel"))} · ${esc(t("youSell"))}</span><span class="num">${esc(dmy(R.date))}</span></div>
     <div class="big num">${esc(nf(R.eur, 2))}<span>${esc(t("da"))}</span></div>
     <div class="row">${chg(R.prev ? R.eur - R.prev : 0, (v) => nf(Math.abs(v), 2))}<span>${esc(t("vsPrev"))}</span></div>
+    ${adviceRow(R)}
     <div class="row"><span>${esc(t("per100"))} <b class="num">${esc(da(R.eur * 100))}</b></span><span>${esc(t("youBuy"))} <b class="num">${esc(nf(R.buy, 2))}</b></span>
       <span>${esc(t("usdSq"))} <b class="num">${esc(nf(R.usd, 2))}</b></span></div>
     ${age > 0 ? `<div class="stale">${esc(t("staleDays", { n: age }))}</div>` : ""}
@@ -596,12 +948,14 @@ function vHome() {
   const next = D.filter((d) => d.status !== "paid").sort((a, b) => (a.due || "9999") < (b.due || "9999") ? -1 : 1).slice(0, 3);
   return `${board(R)}
   ${startCard()}
+  ${billsCard()}
+  ${runwayCard(R)}
   ${monthBar()}
   <button class="tile" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("totalT"))}</span><span class="v">${esc(da(bal * R.eur + cash))}</span>
     <span class="s">${esc(t("totalSub", { e: eu(bal), d: da(cash) }))}</span></button>
   <div class="tiles">
     <button class="tile euro" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("eurBank"))}</span><span class="v">${esc(eu(bal))}</span><span class="s">${esc(eurSub(bal, R))}</span></button>
-    <button class="tile ${cash < 0 ? "bad" : ""}" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("cashT"))}</span><span class="v">${esc(da(cash))}</span><span class="s">${esc(cash < 0 ? t("cashNeg") : eu(M.eurSold) + " " + t("convertedM"))}</span></button>
+    <button class="tile ${cash < 0 ? "bad" : ""}" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("cashT"))}</span><span class="v">${esc(da(cash))}</span><span class="s">${esc(cash < 0 ? t("cashNeg") : placesLine(cashByPlace()) || eu(M.eurSold) + " " + t("convertedM"))}</span></button>
     <button class="tile" type="button" data-act="go" data-to="family"><span class="k">${esc(t("spent"))}</span><span class="v">${esc(da(M.spent))}</span><span class="s">${esc(budgetTotal > 0 ? t("budgetUsed", { p: nf((M.spent / budgetTotal) * 100) }) : t("noBudget"))}</span></button>
     <button class="tile ${M.net < 0 ? "bad" : ""}" type="button" data-act="go" data-to="money" data-tab="months"><span class="k">${esc(t("net"))}</span><span class="v">${esc(da(M.net))}</span><span class="s">${esc(t("inOut", { a: nf(M.inn), b: nf(M.out) }))}</span></button>
     <button class="tile bad" type="button" data-act="go" data-to="debts"><span class="k">${esc(t("iOwe"))}</span><span class="v">${esc(da(sumRem(owe)))}</span><span class="s">${esc(t("overdueN", { n: cnt(owe, "overdue") }))} · ${esc(t("openN", { n: owe.filter((d) => d.status !== "paid").length }))}</span></button>
@@ -712,6 +1066,7 @@ function vMoney() {
       <div class="tile ${cash < 0 ? "bad" : ""}" style="cursor:default"><span class="k">${esc(t("cashT"))}</span><span class="v">${esc(da(cash))}</span>
         <span class="s"><button class="linkbtn" type="button" data-write data-act="cashfix">${esc(t("cashFix"))}</button></span></div></div>
       <button class="btn block" type="button" data-write data-act="form" data-form="sale">${ic("sale")}${esc(t("addSale"))}</button>
+      ${placesCard()}
       <div class="two"><div class="stat"><span class="k">${esc(t("eurSold"))}</span><span class="v">${esc(eu(eurSold))}</span></div>
       <div class="stat"><span class="k">${esc(t("daReceived"))}</span><span class="v">${esc(da(daAll))}</span></div>
       <div class="stat"><span class="k">${esc(t("avgRate"))}</span><span class="v">${esc(nf(eurSold ? daEur / eurSold : 0, 2))}</span></div>
@@ -742,7 +1097,7 @@ function vMoney() {
 
 function vFamily() {
   const R = rateInfo();
-  const seg = ["exp", "rel", "bud"].map((k) => `<button type="button" data-act="seg" data-seg="famTab" data-v="${k}" aria-pressed="${S.famTab === k}">${esc(t("seg." + k))}</button>`).join("");
+  const seg = ["exp", "rel", "fixed", "bud", "report"].map((k) => `<button type="button" data-act="seg" data-seg="famTab" data-v="${k}" aria-pressed="${S.famTab === k}">${esc(t("seg." + k))}</button>`).join("");
   const inM = (x) => ymOf(x.date) === S.month;
   let body = "";
   if (S.famTab === "exp") {
@@ -760,7 +1115,7 @@ function vFamily() {
       <section class="card">${rows.length ? `<div class="list">${rows.map((x) => `<button class="item" type="button" data-act="edit" data-form="expense" data-id="${esc(x.id)}">
         <span class="t">${esc(x.desc || (x.kind === "income" ? t("income") : listLabel("cat", x.cat || "other")))}</span>
         <span class="a ${x.kind === "income" ? "good" : ""}">${x.kind === "income" ? "+" : ""}${esc(da(x.amount))}</span>
-        <span class="m"><span class="num">${esc(dmy(x.date))}</span><span>· ${esc(whoLabel(x.who || "both"))}</span>${x.kind !== "income" ? `<span class="tag neutral">${esc(listLabel("cat", x.cat || "other"))}</span>` : `<span class="tag good">${esc(t("income"))}</span>`}</span></button>`).join("")}</div>`
+        <span class="m"><span class="num">${esc(dmy(x.date))}</span><span>· ${esc(whoLabel(x.who || "both"))}</span>${x.photo ? "<span>📎</span>" : ""}${x.recurId ? "<span>↻</span>" : ""}${x.kind !== "income" ? `<span class="tag neutral">${esc(listLabel("cat", x.cat || "other"))}</span>` : `<span class="tag good">${esc(t("income"))}</span>`}</span></button>`).join("")}</div>`
         : empty("receipt", t("empty.expenses"), 'data-act="form" data-form="expense"', t("addExpense"))}</section>`;
   } else if (S.famTab === "rel") {
     const y = S.month.slice(0, 4);
@@ -777,6 +1132,10 @@ function vFamily() {
         <span class="t">${esc(x.name || listLabel("rel", x.rel || "other"))}</span><span class="a">${esc(da(x.amount))}</span>
         <span class="m"><span class="num">${esc(dmy(x.date))}</span><span class="tag neutral">${esc(listLabel("rel", x.rel || "other"))}</span><span>${esc(listLabel("help", x.htype || "other"))}</span></span></button>`).join("")}</div>`
         : empty("heart", t("empty.help"), 'data-act="form" data-form="help"', t("addHelp"))}</section>`;
+  } else if (S.famTab === "fixed") {
+    body = vFixed();
+  } else if (S.famTab === "report") {
+    body = vReport();
   } else {
     const ex = S.data.expenses.filter((x) => inM(x) && x.kind !== "income");
     const cats = Object.keys(L.en.cat);
@@ -795,7 +1154,7 @@ function vFamily() {
           <span class="a">${esc(nf(s))}${b > 0 ? ` <span class="muted small">/ ${esc(nf(b))}</span>` : ""}</span>
           <span class="m" style="display:grid;grid-template-columns:1fr auto;gap:8px">${b > 0 ? `<span class="bar ${tone}"><i style="width:${Math.min(100, p * 100).toFixed(1)}%"></i></span>${tag}` : `<span>${esc(t("noBudget"))}</span>`}</span></button>`; }).join("")}</div></section>`;
   }
-  return `<div class="seg" role="group">${seg}</div>${monthBar()}${body}`;
+  return `<div class="seg five" role="group">${seg}</div>${S.famTab === "fixed" ? "" : monthBar()}${body}`;
 }
 
 function statusTag(d) {
@@ -862,6 +1221,7 @@ function vPrefs() {
     <dt>${esc(t("payDayShort"))}</dt><dd>${esc(t("payDayText", { d: num(c.payDay) || 15, when: num(c.payLag) === 0 ? t("whenSame") : t("whenNext") }))}</dd>
     <dt>${esc(t("fee"))}</dt><dd>${esc(nf(c.fee, 2))}%</dd><dt>${esc(t("official2"))}</dt><dd>${esc(nf(c.official, 2))}</dd>
     <dt>${esc(t("dueSoon"))}</dt><dd>${esc(nf(c.dueSoon))}</dd><dt>${esc(t("names"))}</dt><dd>${esc(nameMe())} · ${esc(nameWife())}</dd></dl></section>
+  ${IS_APP ? notifyCard() + pinCard() : ""}
   <section class="card"><h2>${esc(t("exportT"))}</h2><p class="small muted">${esc(t("exportNote"))}</p><button class="btn block" type="button" data-act="export" id="exportBtn">${ic("download")}${esc(t("exportB"))}</button></section>
   <section class="card"><h2>${esc(t("shareT"))}</h2><p class="small">${esc(t("shareNote"))}</p></section>
   <section class="card"><h2>${esc(t("homeT"))}</h2><p class="small">${esc(t("homeNote"))}</p></section>`;
@@ -871,18 +1231,25 @@ function vPrefs() {
 const opts = (group) => () => Object.keys(L.en[group]).map((k) => [k, listLabel(group, k)]);
 const whoOpts = () => [["me", nameMe()], ["wife", nameWife()], ["both", t("both")]];
 const curOpts = (withDzd) => () => (withDzd ? [["DZD", "DZD (" + t("da") + ")"], ["EUR", "EUR (€)"], ["USD", "USD ($)"]] : [["EUR", "EUR (€)"], ["USD", "USD ($)"]]);
+const placeOpts = () => PLACES.map((k) => [k, t("place." + k)]);
 const FORMS = {
   rate: { coll: "rates", fields: [["date", "date", 1], ["eur", "num", 1, "big"], ["eurBuy", "num"], ["usd", "num"], ["note", "text"]],
     defaults: () => { const R = rateInfo(); return { date: todayStr(), eur: R.eur || "", eurBuy: R.eur && R.buy !== R.eur ? R.buy : "", usd: R.usdEstimated ? "" : R.usd }; }, hint: { eur: "eurHint" } },
   salary: { coll: "salary", fields: [["month", "month", 1], ["received", "date", 1], ["usdAmt", "num", 1, null, "usd"], ["usdEur", "num", 1], ["eurReal", "num"], ["note", "text"]],
     defaults: () => { const N = nextUnrecorded(); return { month: N.month, received: N.days <= 0 ? todayStr() : N.date, usd: S.cfg.salaryUsd, usdEur: S.cfg.usdEur }; } },
-  sale: { coll: "sales", fields: [["cur", "select", 1, curOpts(false)], ["needDa", "num", 0], ["amount", "num", 1, "big"], ["rate", "num", 1], ["date", "date", 1], ["place", "text"], ["note", "text"]],
-    defaults: () => ({ date: todayStr(), cur: "EUR", rate: rateInfo().eur || "" }) },
+  sale: { coll: "sales", fields: [["cur", "select", 1, curOpts(false)], ["needDa", "num", 0], ["amount", "num", 1, "big"], ["rate", "num", 1], ["saleTo", "select", 0, placeOpts, "to"], ["date", "date", 1], ["place", "text"], ["note", "text"]],
+    defaults: () => ({ date: todayStr(), cur: "EUR", rate: rateInfo().eur || "", to: "cash" }) },
   expense: { coll: "expenses", fields: [["amount", "num", 1, "big"], ["kind", "select", 1, () => [["expense", t("kinds.expense")], ["income", t("kinds.income")]]],
     ["cat", "select", 0, opts("cat")], ["desc", "text"], ["who", "select", 1, whoOpts], ["date", "date", 1], ["pay", "select", 0, opts("pay")]],
     defaults: () => ({ date: todayStr(), kind: "expense", who: S.me, cat: "food", pay: "cash" }) },
-  help: { coll: "help", fields: [["amount", "num", 1, "big"], ["rel", "select", 1, opts("rel")], ["name", "text"], ["htype", "select", 0, opts("help")], ["who", "select", 1, whoOpts], ["date", "date", 1], ["note", "text"]],
-    defaults: () => ({ date: todayStr(), rel: "mother", htype: "monthly", who: S.me }) },
+  help: { coll: "help", fields: [["amount", "num", 1, "big"], ["rel", "select", 1, opts("rel")], ["name", "text"], ["htype", "select", 0, opts("help")], ["who", "select", 1, whoOpts], ["pay", "select", 0, opts("pay")], ["date", "date", 1], ["note", "text"]],
+    defaults: () => ({ date: todayStr(), rel: "mother", htype: "monthly", who: S.me, pay: "cash" }) },
+  recurring: { coll: "recurring", fields: [["name", "text", 1], ["rkind", "select", 1, () => [["expense", t("rkinds.expense")], ["help", t("rkinds.help")]], "kind"],
+    ["amount", "num", 1, "big"], ["day", "num", 1], ["cat", "select", 0, opts("cat")], ["rel", "select", 0, opts("rel")], ["htype", "select", 0, opts("help")],
+    ["who", "select", 0, whoOpts], ["pay", "select", 0, opts("pay")], ["active", "select", 0, () => [["yes", t("yes")], ["no", t("no")]]]],
+    defaults: () => ({ kind: "expense", day: 1, cat: "rent", rel: "mother", htype: "monthly", who: S.me, pay: "cash", active: "yes", start: todayStr().slice(0, 7) }) },
+  move: { coll: "moves", fields: [["from", "select", 1, placeOpts], ["to", "select", 1, placeOpts], ["amount", "num", 1, "big"], ["date", "date", 1], ["note", "text"]],
+    defaults: () => ({ from: "ccp", to: "cash", date: todayStr() }), hint: { amount: "moveHint" } },
   debt: { coll: "debts", fields: [["dir", "select", 1, () => [["owe", t("dirs.owe")], ["owed", t("dirs.owed")]]], ["person", "text", 1], ["amount", "num", 1, "big"], ["cur", "select", 1, curOpts(true)],
     ["due", "date"], ["date", "date"], ["phone", "text"], ["rel", "select", 0, opts("rel")], ["note", "text"]],
     defaults: () => ({ dir: "owe", cur: "DZD", date: todayStr(), rel: "friend" }) },
@@ -924,17 +1291,18 @@ function renderSheet() {
     html = sheetHead(t("form." + sh.kind)) + `<form id="theForm" class="conv" novalidate>${F.fields.map((f) => fieldHtml(f, sh.vals) + (hints[f[0]] ? `<p class="small muted" style="margin:-4px 0 0">${esc(t(hints[f[0]]))}</p>` : "")).join("")}
       ${sh.kind === "sale" ? `<p class="small" id="salePreview" aria-live="polite"></p>` : ""}
       ${sh.kind === "expense" || sh.kind === "help" ? `<p class="small" id="cashPreview" aria-live="polite"></p>` : ""}
+      ${IS_APP && sh.kind === "expense" ? photoField() : ""}
       <div class="actions"><button class="btn" type="submit">${esc(t("save"))}</button>${sh.id ? `<button class="btn danger" type="button" data-act="del">${esc(sh.confirm ? t("confirmDel") : t("del"))}</button>` : ""}</div>
       ${sh.id && sh.confirm && sh.note ? `<p class="small muted">${esc(sh.note)}</p>` : ""}</form>`;
   } else if (sh.type === "cfg" || sh.type === "zakat" || sh.type === "budget" || sh.type === "cashfix" || sh.type === "eurfix") {
     const fields = sh.type === "cfg"
       ? [["salaryUsd", 1], ["usdEur", 1], ["payDay", 1], ["payLag", 0], ["fee", 0], ["official2", 1, "official"], ["dueSoon", 1], ["meName", 0], ["wifeName", 0], ["meNameAr", 0], ["wifeNameAr", 0]]
-      : sh.type === "zakat" ? [["zCash", 0, "cash"], ["zGold", 0, "gold"], ["zGoldPrice", 1, "goldPrice"]] : sh.type === "cashfix" ? [["cashFixLabel", 1, "cash"]] : sh.type === "eurfix" ? [["eurFixLabel", 1, "eur"]] : [["f.budgetAmt", 0, "amount"]];
+      : sh.type === "zakat" ? [["zCash", 0, "cash"], ["zGold", 0, "gold"], ["zGoldPrice", 1, "goldPrice"]] : sh.type === "cashfix" ? [["place.cash", 0, "cash"], ["place.ccp", 0, "ccp"], ["place.bank", 0, "bank"]] : sh.type === "eurfix" ? [["eurFixLabel", 1, "eur"]] : [["f.budgetAmt", 0, "amount"]];
     const title = sh.type === "cfg" ? t("money2") : sh.type === "zakat" ? t("zakat") : sh.type === "cashfix" ? t("cashT") : sh.type === "eurfix" ? t("eurBank") : listLabel("cat", sh.cat);
     html = sheetHead(title) + `<form id="theForm" class="conv" novalidate>${fields.map(([lab, req, key]) => {
       const k = key || lab, v = sh.vals[k], isText = /Name/.test(k);
       return `<div class="field"><label for="fld_${k}">${esc(t(lab))}${req ? " *" : ""}</label><input id="fld_${k}" type="text" ${isText ? 'maxlength="40"' : 'inputmode="decimal"'} autocomplete="off" value="${esc(v ?? "")}"></div>`; }).join("")}
-      ${sh.type === "cashfix" || sh.type === "eurfix" ? `<p class="small muted">${esc(t(sh.type === "cashfix" ? "cashNote" : "eurFixNote"))}</p>` : ""}<div class="actions"><button class="btn" type="submit">${esc(t("save"))}</button></div></form>`;
+      ${sh.type === "cashfix" || sh.type === "eurfix" ? `<p class="small muted">${esc(sh.type === "cashfix" ? t("cashFixLabel") + " " + t("cashNote") : t("eurFixNote"))}</p>` : ""}<div class="actions"><button class="btn" type="submit">${esc(t("save"))}</button></div></form>`;
   } else if (sh.type === "debt") {
     const R = rateInfo(), d = debtList(R).find((x) => x.id === sh.id);
     if (!d) { closeSheet(); return; }
@@ -965,6 +1333,8 @@ function renderSheet() {
         <span class="a ${num(s.amount) < 0 ? "bad" : "good"}">${esc(nf(s.amount, (s.cur || "DZD") === "DZD" ? 0 : 2))} ${esc((s.cur || "DZD") === "DZD" ? t("da") : s.cur === "EUR" ? "€" : "$")}</span>
         <span class="m">${(s.cur || "DZD") !== "DZD" ? `<span>≈ ${esc(da(toDa(s.amount, s.cur, R)))}</span>` : ""}<span>${esc(listLabel("kept", s.kept || "other"))}</span>${s.note ? `<span>· ${esc(s.note)}</span>` : ""}</span></button>`).join("")}</div>` : ""}`;
   }
+  if (sh.type === "notify") html = notifySheet();
+  if (sh.type === "pin") html = pinSheet(sh);
   body.innerHTML = html;
   document.getElementById("sheet").hidden = false; document.getElementById("scrim").hidden = false;
   if (sh.type === "form" && sh.kind === "sale") salePreview();
@@ -1014,6 +1384,7 @@ function openForm(kind, item, extra) {
   const vals = item ? { ...item } : { ...F.defaults(), ...(extra || {}) };
   if (item && kind === "goal") vals.goalDue = item.due;
   S.sheet = { type: "form", kind, id: item ? item.id : null, vals, back: S.sheet && (S.sheet.type === "debt" || S.sheet.type === "goal") ? { type: S.sheet.type, id: S.sheet.id } : null };
+  if (IS_APP && kind === "expense" && item && item.photo) { try { S.sheet.photo = window.AndroidWallet.loadPhoto(item.id) || null; } catch (e) { S.sheet.photo = null; } }
   renderSheet();
 }
 function closeSheet() {
@@ -1043,9 +1414,9 @@ async function saveDoc(coll, id, obj) {
   if (!S.db) { toast(t("noDb")); return false; }
   try {
     const body = { ...obj, ts: obj.ts || Date.now(), by: S.me };
-    if (id) await withRetry(() => S.db.collection(coll).doc(id).set(body));
-    else await withRetry(() => S.db.collection(coll).doc().set(body));
-    return true;
+    const ref = id ? S.db.collection(coll).doc(id) : S.db.collection(coll).doc();
+    await withRetry(() => ref.set(body));
+    return ref.id || id || true;
   } catch (e) { writeError(e); return false; }
 }
 async function delDoc(coll, id) {
@@ -1059,6 +1430,8 @@ async function saveCfg(patch) {
 }
 async function submitForm() {
   const sh = S.sheet; if (!sh) return;
+  if (sh.type === "notify") return submitNotify();
+  if (sh.type === "pin") return submitPin();
   const read = (k) => { const el = document.getElementById("fld_" + k); return el ? el.value : undefined; };
   if (sh.type === "form") {
     const F = FORMS[sh.kind];
@@ -1080,14 +1453,25 @@ async function submitForm() {
     if (sh.kind === "payment") out.debtId = sh.vals.debtId;
     if (sh.kind === "sale") delete out.needDa;
     if (sh.kind === "salary" && !out.received) out.received = payDate(out.month);
+    if (sh.kind === "recurring") {
+      if (!(out.day >= 1 && out.day <= 31)) return toast(t("badNum", { f: t("f.day") }));
+      out.day = Math.round(out.day); out.start = sh.vals.start || todayStr().slice(0, 7); out.skipped = sh.vals.skipped || [];
+    }
+    if (sh.kind === "move" && out.from === out.to) return toast(t("required", { f: t("f.to") }));
+    if (sh.vals.recurId) { out.recurId = sh.vals.recurId; out.ym = sh.vals.ym; }
+    if (sh.kind === "expense" && IS_APP) out.photo = !!sh.photo;
     if (sh.kind === "expense" && out.kind === "income") out.cat = "";
     const keep = sh.id ? { ts: sh.vals.ts } : {};
     const moves = sh.kind === "expense" || sh.kind === "help" ? cashAfter(sh.kind, num(out.amount), out.kind === "income", sh.id).after : null;
     const ok = await saveDoc(F.coll, sh.id, { ...keep, ...out });
+    if (ok && IS_APP && sh.kind === "expense" && sh.photoChanged) {
+      const id = typeof ok === "string" ? ok : sh.id;
+      try { if (sh.photo) window.AndroidWallet.savePhoto(id, sh.photo.split(",")[1]); else window.AndroidWallet.deletePhoto(id); } catch (e) { /* photo not saved */ }
+    }
     if (ok) { toast(moves === null ? t("saved2") : t("savedLeft", { v: da(moves) })); closeSheet(); }
   } else {
     const keys = sh.type === "cfg" ? ["salaryUsd", "usdEur", "payDay", "payLag", "fee", "official", "dueSoon", "meName", "wifeName", "meNameAr", "wifeNameAr"]
-      : sh.type === "zakat" ? ["cash", "gold", "goldPrice"] : sh.type === "cashfix" ? ["cash"] : sh.type === "eurfix" ? ["eur"] : ["amount"];
+      : sh.type === "zakat" ? ["cash", "gold", "goldPrice"] : sh.type === "cashfix" ? ["cash", "ccp", "bank"] : sh.type === "eurfix" ? ["eur"] : ["amount"];
     const vals = {};
     for (const k of keys) {
       const raw = read(k) || "";
@@ -1103,7 +1487,7 @@ async function submitForm() {
       vals.payDay = Math.round(vals.payDay); vals.payLag = Math.min(2, Math.round(vals.payLag));
       patch = vals;
     } else if (sh.type === "zakat") patch = { zakat: vals };
-    else if (sh.type === "cashfix") patch = { cashAdjust: Math.round((vals.cash - cashInHand(false)) * 100) / 100 };
+    else if (sh.type === "cashfix") { const c = cashByPlace(false), A = {}; for (const k of PLACES) A[k] = Math.round((num(vals[k]) - c[k]) * 100) / 100; patch = { cashAdjustBy: A, cashAdjust: 0 }; }
     else if (sh.type === "eurfix") patch = { eurAdjust: Math.round((vals.eur - eurBalance(false)) * 100) / 100 };
     else patch = { budgets: { ...(S.cfg.budgets || {}), [sh.cat]: vals.amount } };
     if (await saveCfg(patch)) { toast(t("saved2")); closeSheet(); render(); }
@@ -1124,6 +1508,7 @@ async function deleteCurrent() {
     : sh.kind === "goal" ? S.data.savings.filter((p) => p.goalId === sh.id).map((p) => ["savings", p.id]) : [];
   for (const [c, id] of children) { if (!(await delDoc(c, id))) return; }
   if (await delDoc(F.coll, sh.id)) {
+    if (IS_APP && sh.kind === "expense" && sh.vals.photo) { try { window.AndroidWallet.deletePhoto(sh.id); } catch (e) { /* already gone */ } }
     toast(t("deleted"));
     if (sh.back && sh.back.id === sh.id) sh.back = null;
     closeSheet();
@@ -1162,6 +1547,10 @@ async function exportXlsx() {
       goalList(R).map((g) => [g.name || "", en("gcat", g.cat || "other"), g.target, Math.round(g.saved), +(g.prog * 100).toFixed(1) + "%", g.due || "", Math.round(g.perMonth), L.en.st[g.st]])],
     ["Savings", ["Date - التاريخ", "Goal - الهدف", "Amount", "Currency", "Value DA today", "Who", "Where kept"],
       S.data.savings.slice().sort(byDate).map((s) => { const g = S.data.goals.find((x) => x.id === s.goalId); return [s.date, g ? g.name : "", num(s.amount), s.cur || "DZD", Math.round(toDa(s.amount, s.cur || "DZD", R)), who(s.who), en("kept", s.kept || "other")]; })],
+    ["Monthly", ["Name - الاسم", "Type", "Amount (DA)", "Day", "Active"],
+      S.data.recurring.map((r) => [r.name || "", r.kind === "help" ? "Help" : "Expense", num(r.amount), num(r.day), r.active === "no" ? "No" : "Yes"])],
+    ["Moves", ["Date - التاريخ", "From", "To", "Amount (DA)", "Note"],
+      S.data.moves.slice().sort(byDate).map((m) => [m.date, L.en.place[m.from] || m.from, L.en.place[m.to] || m.to, num(m.amount), m.note || ""])],
     ["12 months", ["Month - الشهر", "Salary EUR", "EUR sold", "DA from selling", "Other income", "Family spending", "Help", "Saved", "Net (DA)"],
       Array.from({ length: 12 }, (_, i) => addMonths(S.month, i - 11)).map((m) => { const s = monthSummary(m, R); return [m, +s.sal.toFixed(2), s.eurSold, Math.round(s.daSales), s.otherIn, s.spent, s.help, Math.round(s.saved), Math.round(s.net)]; })],
   ];
@@ -1193,6 +1582,7 @@ function render() {
   let html;
   try { html = V(); } catch (e) { console.error(e); html = `<div class="card"><p>${esc(String(e && e.message))}</p></div>`; }
   document.getElementById("view").innerHTML = banner + html;
+  syncNative();
   if (S.sheet && (S.sheet.type === "debt" || S.sheet.type === "goal")) renderSheet();
 }
 function go(route, tab) {
@@ -1224,9 +1614,20 @@ document.addEventListener("click", (e) => {
   else if (a === "debt" || a === "goal") { S.sheet = { type: a, id: el.dataset.id }; renderSheet(); }
   else if (a === "cfg") { S.sheet = { type: "cfg", vals: { ...S.cfg } }; renderSheet(); }
   else if (a === "eurfix") { S.sheet = { type: "eurfix", vals: { eur: Math.max(0, +eurBalance().toFixed(2)) || "" } }; renderSheet(); }
-  else if (a === "cashfix") { S.sheet = { type: "cashfix", vals: { cash: Math.round(cashInHand()) } }; renderSheet(); }
+  else if (a === "cashfix") { const b = cashByPlace(); S.sheet = { type: "cashfix", vals: { cash: Math.round(b.cash), ccp: Math.round(b.ccp), bank: Math.round(b.bank) } }; renderSheet(); }
   else if (a === "zakat") { S.sheet = { type: "zakat", vals: { ...DEFAULTS.zakat, ...(S.cfg.zakat || {}) } }; renderSheet(); }
   else if (a === "budget") { if (S.canWrite === false) return; S.sheet = { type: "budget", cat: el.dataset.cat, vals: { amount: num((S.cfg.budgets || {})[el.dataset.cat]) || "" } }; renderSheet(); }
+  else if (a === "billpay") billPay(el.dataset.id, el.dataset.ym);
+  else if (a === "billskip") billSkip(el.dataset.id, el.dataset.ym);
+  else if (a === "photo") { const f = document.getElementById("photoFile"); if (f) { f.value = ""; f.click(); } }
+  else if (a === "photodel") { if (S.sheet) { S.sheet.photo = null; S.sheet.photoChanged = true; updatePhotoBox(); } }
+  else if (a === "photoview") { const v = document.getElementById("photoView"); if (S.sheet && S.sheet.photo && v) { document.getElementById("photoImg").src = S.sheet.photo; v.hidden = false; } }
+  else if (a === "photoclose") document.getElementById("photoView").hidden = true;
+  else if (a === "notify") { S.sheet = { type: "notify" }; renderSheet(); }
+  else if (a === "pin") { S.sheet = { type: "pin", mode: el.dataset.mode }; renderSheet(); }
+  else if (a === "pinkey") pinKey(el.dataset.k);
+  else if (a === "pinforgot") { S.lockForgot = true; renderLock(); }
+  else if (a === "pinerase") pinErase();
   else if (a === "close") closeSheet();
   else if (a === "del") deleteCurrent();
   else if (a === "export") exportXlsx();
@@ -1273,6 +1674,7 @@ async function start() {
   db.doc("config/main").onSnapshot((snap) => {
     const d = snap.exists ? snap.data() : {};
     S.cfg = { ...DEFAULTS, ...d, budgets: { ...(d.budgets || {}) }, zakat: { ...DEFAULTS.zakat, ...(d.zakat || {}) } };
+    if (!S.lockChecked) { S.lockChecked = true; if (IS_APP && S.cfg.pinHash) showLock(); }
     schedule();
   }, () => {});
 }

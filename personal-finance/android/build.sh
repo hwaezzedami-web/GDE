@@ -11,9 +11,9 @@ python3 make_index.py
 python3 make_icons.py
 
 aapt package -f -m -J build/gen -M AndroidManifest.xml -S res -A assets -I "$SDK" \
-  --min-sdk-version 21 --target-sdk-version 34 --version-code 5 --version-name 1.4 -F build/res.apk
+  --min-sdk-version 21 --target-sdk-version 34 --version-code 6 --version-name 2.0 -F build/res.apk
 javac --release 8 -nowarn -Xlint:-options -classpath "$SDK" -d build/classes \
-  build/gen/com/aboubakr/wallet/R.java src/com/aboubakr/wallet/MainActivity.java
+  build/gen/com/aboubakr/wallet/R.java src/com/aboubakr/wallet/*.java
 dalvik-exchange --dex --min-sdk-version=21 --output=build/classes.dex build/classes
 
 # Android 11+ needs resources.arsc stored uncompressed: rebuild the zip with it STORED.

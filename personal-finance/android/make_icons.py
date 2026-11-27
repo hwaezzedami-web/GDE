@@ -31,4 +31,24 @@ for name, px in SIZES.items():
     out = HERE / "res" / f"mipmap-{name}" / "ic_launcher.png"
     out.parent.mkdir(parents=True, exist_ok=True)
     draw(px).save(out)
+STAT = {"mdpi": 24, "hdpi": 36, "xhdpi": 48, "xxhdpi": 72, "xxxhdpi": 96}
+
+
+def draw_stat(px: int) -> Image.Image:
+    n = px * 4
+    img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    white = (255, 255, 255, 255)
+    d.rounded_rectangle([n * .08, n * .26, n * .92, n * .86], radius=int(n * .12), fill=white)
+    d.rounded_rectangle([n * .20, n * .10, n * .80, n * .30], radius=int(n * .05), fill=white)
+    d.rounded_rectangle([n * .56, n * .46, n * .98, n * .66], radius=int(n * .08), fill=(0, 0, 0, 0))
+    r = n * .05
+    d.ellipse([n * .70 - r, n * .56 - r, n * .70 + r, n * .56 + r], fill=white)
+    return img.resize((px, px), Image.LANCZOS)
+
+
+for name, px in STAT.items():
+    out = HERE / "res" / f"drawable-{name}" / "ic_stat.png"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    draw_stat(px).save(out)
 print("icons ok")

@@ -49,7 +49,7 @@ rep('''  <section class="card"><h2>${esc(t("shareT"))}</h2><p class="small">${es
     <div class="actions"><button class="btn" type="button" data-act="backup">${ic("download")}${esc(t("backupB"))}</button>
     <button class="btn ghost" type="button" data-act="restore">${esc(t("restoreB"))}</button></div>
     <input type="file" id="restoreFile" accept=".json,application/json,text/plain" hidden></section>
-  <section class="card"><h2>${esc(t("phoneT"))}</h2><p class="small">${esc(t("phoneNote"))}</p><p class="small muted">${esc(t("version"))} 1.4</p></section>`;''')
+  <section class="card"><h2>${esc(t("phoneT"))}</h2><p class="small">${esc(t("phoneNote"))}</p><p class="small muted">${esc(t("version"))} 2.0</p></section>`;''')
 
 # 4. Excel export with the bundled library and the phone's save screen
 rep('''  const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
@@ -107,6 +107,7 @@ const LocalDB = (() => {
         doc(id) {
           const docId = id || newId();
           return {
+            id: docId,
             async set(obj) { const all = (state.colls[c] = state.colls[c] || {}); const before = all[docId]; all[docId] = clone(obj);
               try { persist(); } catch (e) { if (before === undefined) delete all[docId]; else all[docId] = before; throw e; } emit(c); },
             async delete() { const all = state.colls[c] || {}; const before = all[docId]; delete all[docId];
@@ -138,8 +139,12 @@ function saveOut(name, b64, mime) {
   a.href = "data:" + mime + ";base64," + b64; a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
 }
-window.walletSaved = (ok) => toast(ok ? t("fileSaved") : t("notSaved"));
-function backupNow() { saveOut(`Wallet_backup_${todayStr()}.json`, b64utf8(JSON.stringify(LocalDB.exportAll())), "application/json"); }
+window.walletSaved = (ok) => {
+  toast(ok ? t("fileSaved") : t("notSaved"));
+  if (ok && S.pendingBackup) saveCfg({ lastBackup: todayStr() });
+  S.pendingBackup = false;
+};
+function backupNow() { S.pendingBackup = true; saveOut(`Wallet_backup_${todayStr()}.json`, b64utf8(JSON.stringify(LocalDB.exportAll())), "application/json"); }
 function readRestore(file) {
   if (!file) return;
   const fr = new FileReader();
@@ -168,6 +173,8 @@ function applyTheme(dark) {
 }
 window.walletTheme = (dark) => applyTheme(!!dark);
 window.walletBack = () => {
+  if (S.locked) return false;
+  if (!document.getElementById("photoView").hidden) { document.getElementById("photoView").hidden = true; return true; }
   if (S.sheet) { closeSheet(); return true; }
   if (S.route !== "home") { go("home"); return true; }
   return false;
