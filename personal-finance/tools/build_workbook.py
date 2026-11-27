@@ -15,7 +15,7 @@ from openpyxl.chart import BarChart, LineChart, Reference
 from openpyxl.chart.axis import DateAxis
 from openpyxl.chart.series import SeriesLabel
 from openpyxl.comments import Comment
-from openpyxl.formatting.rule import CellIsRule, DataBarRule, FormulaRule
+from openpyxl.formatting.rule import CellIsRule, ColorScaleRule, FormulaRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter, column_index_from_string
 from openpyxl.workbook.defined_name import DefinedName
@@ -54,8 +54,15 @@ FMT_USD_U = '#,##0 "$";[Red]-#,##0 "$";"-"'
 FMT_RATE = '#,##0.00'
 FMT_RATE4 = '0.0000'
 FMT_PCT = '0.0%;[Red]-0.0%;"-"'
-FMT_CHG = '[Color10]▲ #,##0.00;[Red]▼ #,##0.00;"="'
-FMT_CHGP = '[Color10]▲ 0.00%;[Red]▼ 0.00%;"="'
+FMT_CHG = '▲ #,##0.00;▼ #,##0.00;"="'
+FMT_CHGP = '▲ 0.00%;▼ 0.00%;"="'
+
+
+def color_change(ws, rng):
+    """Green when up, red when down (conditional formatting works in Excel and Google Sheets)."""
+    tl = rng.split(":")[0].replace("$", "")
+    ws.conditional_formatting.add(rng, FormulaRule(formula=[f"AND(ISNUMBER({tl}),{tl}>0)"], font=Font(color=GREEN, bold=True)))
+    ws.conditional_formatting.add(rng, FormulaRule(formula=[f"AND(ISNUMBER({tl}),{tl}<0)"], font=Font(color=RED, bold=True)))
 FMT_INT = '#,##0;[Red]-#,##0;"0"'
 
 
@@ -188,8 +195,12 @@ def comment(ws, coord, text, w=320, h=110):
     ws[coord].comment = cm
 
 
+LIST_SRC = {}   # list name -> direct range (works in Excel and Google Sheets)
+
+
 def dv_list(ws, rng, listname, strict=False, prompt=None):
-    dv = DataValidation(type="list", formula1=f"={listname}", allow_blank=True)
+    dv = DataValidation(type="list", formula1=LIST_SRC[listname], allow_blank=True)
+    dv.showErrorMessage = True
     dv.errorStyle = "stop" if strict else "warning"
     dv.errorTitle = "Choose from the list - اختر من القائمة"
     dv.error = "Please choose a value from the dropdown list.\nاختر قيمة من القائمة المنسدلة."
@@ -201,6 +212,7 @@ def dv_list(ws, rng, listname, strict=False, prompt=None):
 
 def dv_date(ws, rng):
     dv = DataValidation(type="date", operator="between", formula1="36526", formula2="73415", allow_blank=True)
+    dv.showErrorMessage = True
     dv.errorStyle = "stop"
     dv.errorTitle = "Date - تاريخ"
     dv.error = "Type a date like 27/11/2026.\nاكتب تاريخا مثل 27/11/2026."
@@ -213,6 +225,7 @@ def dv_number(ws, rng, minimum=0, negative_ok=False):
         dv = DataValidation(type="decimal", operator="between", formula1="-1000000000000", formula2="1000000000000", allow_blank=True)
     else:
         dv = DataValidation(type="decimal", operator="greaterThanOrEqual", formula1=str(minimum), allow_blank=True)
+    dv.showErrorMessage = True
     dv.errorStyle = "stop"
     dv.errorTitle = "Number - رقم"
     dv.error = "Type a number only (no letters).\nاكتب رقما فقط."
@@ -418,7 +431,8 @@ for c, nm, hdr, items in LISTS:
     put(ws, f"{c}5", hdr, fnt(9, True, "FFFFFF"), TEAL, align=Alignment(horizontal="center", vertical="center", wrap_text=True), border=BORDER)
     for i in range(25):
         cell = put(ws, f"{c}{6 + i}", items[i] if i < len(items) else None, fnt(9, False, BLUE_IN), border=BORDER)
-    define_formula(nm, f"OFFSET({q(SET)}${c}$6,0,0,MAX(1,COUNTA({q(SET)}${c}$6:${c}$30)),1)")
+    LIST_SRC[nm] = f"{q(SET)}${c}$6:${c}$30"
+    define(nm, SET, f"{c}6:{c}30")
 ws.row_dimensions[5].height = 30
 define("WHO_ME", SET, "E6")
 define("WHO_WIFE", SET, "E7")
@@ -472,11 +486,13 @@ build_log(ws, RATES, rate_cols, "💱 Daily exchange rates - أسعار الصر
 for i in range(len(rate_examples)):
     if rate_examples[i]["F"] is None:
         ws[f"F{f6 + i}"].value = None
+color_change(ws, f"G{f6}:H{l6}")
 chips(ws, 3, "C", [
     ("Now (you sell)\nالآن (بيع)", "=RATE_EUR", FMT_RATE),
     ("Change\nالتغير", "=IF(RATE_EUR_PREV=0,0,RATE_EUR-RATE_EUR_PREV)", FMT_CHG),
     ("Last update\nآخر تحديث", "=IF(RATE_DATE=0,\"-\",RATE_DATE)", FMT_DATE),
 ])
+color_change(ws, "G3")
 # chart helper: last 30 days (carry the last known price forward)
 ws.column_dimensions["M"].width = 3
 ws.column_dimensions["N"].width = 12
@@ -655,7 +671,7 @@ ws = WS[PAY]
 f6, l6 = ROWS[PAY]
 define("P_ID", PAY, f"F{f6}:F{l6}")
 define("P_AMT", PAY, f"C{f6}:C{l6}")
-define_formula("LIST_DEBTLABEL", f"{q(DEBT)}$P${ROWS[DEBT][0]}:$P${ROWS[DEBT][1]}")
+LIST_SRC["LIST_DEBTLABEL"] = f"{q(DEBT)}$P${ROWS[DEBT][0]}:$P${ROWS[DEBT][1]}"
 pay_cols = [
     dict(c="A", en="Date", ar="التاريخ", w=12, kind="in", fmt=FMT_DATE, dv=dv_date),
     dict(c="B", en="Debt (choose)", ar="الدين (اختر)", w=34, kind="in",
@@ -769,7 +785,8 @@ for c in "BCDEFG":
     put(ws, f"{c}{rr}", f"=SUM({c}7:{c}32)", fnt(10, True, "FFFFFF"), NAVY, FMT_DZD, border=BORDER)
 put(ws, f"H{rr}", "=IF(B33>0,F33/B33,\"\")", fnt(10, True, "FFFFFF"), NAVY, "0%", border=BORDER)
 put(ws, f"I{rr}", None, fill_=NAVY, border=BORDER)
-ws.conditional_formatting.add("H7:H31", DataBarRule(start_type="num", start_value=0, end_type="num", end_value=1, color="5B8DEF", showValue=True))
+ws.conditional_formatting.add("H7:H31", ColorScaleRule(start_type="num", start_value=0, start_color="C8E6C9", mid_type="num", mid_value=0.8,
+                                                        mid_color="FFF59D", end_type="num", end_value=1, end_color="EF9A9A"))
 ws.conditional_formatting.add("I7:I31", FormulaRule(formula=['ISNUMBER(SEARCH("Over",$I7))'], font=Font(color=RED, bold=True), fill=fill("FDE2E1")))
 ws.conditional_formatting.add("I7:I31", FormulaRule(formula=['ISNUMBER(SEARCH("Near",$I7))'], font=Font(color=ORANGE, bold=True)))
 ws.conditional_formatting.add("I7:I31", FormulaRule(formula=['ISNUMBER(SEARCH("OK",$I7))'], font=Font(color=GREEN)))
@@ -882,7 +899,7 @@ chips(ws, 3, "C", [
     ("Saved\nالمدخر", "=SAVINGS_DZD", FMT_DZD),
     ("Progress\nالتقدم", '=IF(GOALS_TARGET>0,SAVINGS_DZD/GOALS_TARGET,0)', "0%"),
 ])
-ws.conditional_formatting.add(f"K{f6}:K{l6}", DataBarRule(start_type="num", start_value=0, end_type="num", end_value=1, color="43A047", showValue=True))
+ws.conditional_formatting.add(f"K{f6}:K{l6}", ColorScaleRule(start_type="num", start_value=0, start_color="FFFFFF", end_type="num", end_value=1, end_color="81C784"))
 ws.conditional_formatting.add(f"N{f6}:N{l6}", FormulaRule(formula=[f'ISNUMBER(SEARCH("Behind",$N{f6}))'], font=Font(color=RED, bold=True)))
 ws.conditional_formatting.add(f"N{f6}:N{l6}", FormulaRule(formula=[f'OR(ISNUMBER(SEARCH("track",$N{f6})),ISNUMBER(SEARCH("Done",$N{f6})))'], font=Font(color=GREEN, bold=True)))
 
@@ -893,7 +910,7 @@ ws = WS[SAV]
 f6, l6 = ROWS[SAV]
 for nm, c in (("SV_DATE", "A"), ("SV_ID", "H"), ("SV_DZD", "I")):
     define(nm, SAV, f"{c}{f6}:{c}{l6}")
-define_formula("LIST_GOALLABEL", f"{q(PLAN)}$P${ROWS[PLAN][0]}:$P${ROWS[PLAN][1]}")
+LIST_SRC["LIST_GOALLABEL"] = f"{q(PLAN)}$P${ROWS[PLAN][0]}:$P${ROWS[PLAN][1]}"
 sav_cols = [
     dict(c="A", en="Date", ar="التاريخ", w=12, kind="in", fmt=FMT_DATE, dv=dv_date),
     dict(c="B", en="Goal (choose)", ar="الهدف (اختر)", w=34, kind="in",
@@ -1215,7 +1232,8 @@ for k in range(1, 7):
         "J": (f'=IF($S{rr}="",{first_goal},INDEX(G_NAME,$S{rr}))', None),
         "K": (f'=IF($S{rr}="","",INDEX(G_TARGET,$S{rr}))', FMT_DZD),
         "L": (f'=IF($S{rr}="","",INDEX(G_SAVED,$S{rr}))', FMT_DZD),
-        "N": (f'=IF($S{rr}="","",INDEX(G_PROG,$S{rr}))', "0%"),
+        "N": (f'=IF($S{rr}="","",REPT("█",ROUND(10*N(INDEX(G_PROG,$S{rr})),0))&REPT("░",10-ROUND(10*N(INDEX(G_PROG,$S{rr})),0))'
+              f'&" "&ROUND(100*N(INDEX(G_PROG,$S{rr})),0)&"%")', None),
         "O": (f'=IF($S{rr}="","",INDEX(G_MONTHLY,$S{rr}))', FMT_DZD),
         "P": (f'=IF($S{rr}="","",INDEX(G_STATUS,$S{rr}))', None),
     }
@@ -1227,7 +1245,9 @@ for k in range(1, 7):
     ws[f"M{rr}"].border = BORDER
 ws.conditional_formatting.add("B28:H33", FormulaRule(formula=['ISNUMBER(SEARCH("Overdue",$H28))'], fill=fill("FDE2E1"), font=Font(color=RED, bold=True)))
 ws.conditional_formatting.add("B28:H33", FormulaRule(formula=['ISNUMBER(SEARCH("Due soon",$H28))'], fill=fill("FFF1D6"), font=Font(color=ORANGE, bold=True)))
-ws.conditional_formatting.add("N28:N33", DataBarRule(start_type="num", start_value=0, end_type="num", end_value=1, color="43A047", showValue=True))
+for rr in range(28, 34):
+    ws[f"N{rr}"].font = fnt(8, True, GREEN)
+color_change(ws, "P19")
 ws.conditional_formatting.add("P28:P33", FormulaRule(formula=['ISNUMBER(SEARCH("Behind",$P28))'], font=Font(color=RED, bold=True)))
 
 ws.merge_cells("B35:P35")
@@ -1430,18 +1450,24 @@ g_row("USD → EUR\nالدولار ← الأورو", "YES, automatic (official 
 g_row("Official EUR → DZD\nالسعر الرسمي", "Automatic in Google Sheets only. Elsewhere it uses the number in Settings (it moves slowly: update it once a month).",
       "تلقائي في Google Sheets فقط. غير ذلك يستعمل الرقم في الإعدادات (يتغير ببطء: حدّثه مرة في الشهر).", h=40)
 r += 1
-g_head("5. Use it on your phone, laptop off - على الهاتف بدون حاسوب")
-g_row("Option 1\nExcel app", "Put this file in OneDrive. Install the free Microsoft Excel app on your phone and open the file from OneDrive. "
-      "Type the rate and expenses from anywhere. Share the file with Bouchra so she can add her expenses too.",
-      "ضع الملف في OneDrive. ثبّت تطبيق Microsoft Excel المجاني على الهاتف وافتح الملف منه. اكتب السعر والمصاريف من أي مكان. "
-      "شارك الملف مع بشرى لتضيف مصاريفها أيضا.", h=62)
-g_row("Option 2\nGoogle Sheets", "Upload this file to Google Drive → open it → File → Save as Google Sheets. Use the free Google Sheets app. "
-      "The official USD→EUR and EUR→DZD rates then update by themselves on Google's servers. Share it with Bouchra.",
-      "ارفع الملف إلى Google Drive ← افتحه ← ملف ← حفظ بتنسيق Google Sheets. استعمل تطبيق Google Sheets المجاني. "
-      "الأسعار الرسمية تتحدث وحدها على خوادم Google. شاركه مع بشرى.", h=62)
-g_row("Missing dropdown\nقائمة ناقصة", "In Google Sheets, if a list arrow does not appear: select the column → Data → Data validation → Dropdown (from a range) "
+g_head("5. Google Sheets on your phone (laptop off) - Google Sheets على الهاتف")
+g_row("Step 1\nUpload - رفع", "Open drive.google.com (or the Google Drive app) → New (+) → File upload → choose this file.",
+      "افتح drive.google.com (أو تطبيق Google Drive) ← جديد (+) ← رفع ملف ← اختر هذا الملف.", h=34)
+g_row("Step 2\nConvert - تحويل", "Open the file → File → Save as Google Sheets. From now on use only this new copy "
+      "(it has no .XLSX label next to its name).",
+      "افتح الملف ← ملف ← حفظ بتنسيق Google Sheets. من الآن استعمل هذه النسخة الجديدة فقط (بدون علامة XLSX بجانب الاسم).", h=48)
+g_row("Step 3\nDates - التاريخ", "File → Settings → Locale: Algeria (or France) → Save. Then dates are day/month/year (27/11/2026).",
+      "ملف ← الإعدادات ← اللغة والمنطقة: الجزائر (أو فرنسا) ← حفظ. هكذا يصبح التاريخ يوم/شهر/سنة.", h=34)
+g_row("Step 4\nShare - مشاركة", "Share → type Bouchra's Gmail → Editor → Send. You both write in the same file from your phones, at the same time.",
+      "مشاركة ← اكتب بريد بشرى (Gmail) ← محرر ← إرسال. تكتبان معا في نفس الملف من هاتفيكما.", h=34)
+g_row("Step 5\nPhone - الهاتف", "Install the free Google Sheets app. Every morning open the Rates tab and add today's date and square price. "
+      "Everything else updates at once, laptop off.",
+      "ثبّت تطبيق Google Sheets المجاني. كل صباح افتح ورقة الأسعار وأضف التاريخ وسعر السكوار. كل شيء آخر يتحدث فورا والحاسوب مطفأ.", h=48)
+g_row("Missing dropdown\nقائمة ناقصة", "If a list arrow does not appear: select the column → Data → Data validation → Dropdown (from a range) "
       "→ pick the list in the Settings sheet.",
-      "في Google Sheets إذا لم تظهر القائمة المنسدلة: حدد العمود ← بيانات ← التحقق من صحة البيانات ← قائمة من نطاق ← اختر القائمة من ورقة الإعدادات.", h=48)
+      "إذا لم تظهر القائمة المنسدلة: حدد العمود ← بيانات ← التحقق من صحة البيانات ← قائمة من نطاق ← اختر القائمة من ورقة الإعدادات.", h=48)
+g_row("Excel copy\nنسخة Excel", "You can always get an Excel copy: File → Download → Microsoft Excel (.xlsx).",
+      "يمكنك دائما تنزيل نسخة Excel: ملف ← تنزيل ← Microsoft Excel.", h=34)
 r += 1
 g_head("6. Tips - نصائح")
 g_row("Filters", "Click the arrow in any header to filter (one person, one category, one month). Row 4 totals follow the filter.",
@@ -1450,8 +1476,8 @@ g_row("Dates", "Type dates as day/month/year (27/11/2026). The order of lines do
       "اكتب التاريخ يوم/شهر/سنة (27/11/2026). ترتيب الأسطر غير مهم.")
 g_row("New categories", "Settings → add a new item at the bottom of any list; dropdowns and the budget update.",
       "الإعدادات ← أضف عنصرا في أسفل أي قائمة، القوائم والميزانية تتحدث.")
-g_row("Backup", "Save a copy every month (or keep the file in OneDrive / Google Drive).",
-      "احفظ نسخة كل شهر (أو ضع الملف في OneDrive / Google Drive).")
+g_row("Backup", "Google Sheets saves every change. To go back: File → Version history.",
+      "Google Sheets يحفظ كل تغيير. للرجوع: ملف ← سجل النسخ.")
 g_row("Sources", "Example rates: Awras / Dinar Plus (2 Nov 2026: EUR ≈ 277 DZD, USD ≈ 241 DZD at the square); Bank of Algeria via Observalgerie "
       "(16 Nov 2026: EUR ≈ 151 DZD official); Trading Economics (mid-Nov 2026: EUR ≈ 1.10 USD). Replace them with your real numbers.",
       "مصادر الأمثلة: أوراس / دينار بلس، بنك الجزائر، Trading Economics. استبدلها بأرقامك الحقيقية.", h=48)

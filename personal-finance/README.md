@@ -29,10 +29,14 @@ Rows marked **"Example - مثال"** are samples. Delete them before you start.
 - **Square (black-market) price: no.** There is no public live feed that a spreadsheet can read (apps like Dinar Plus collect it from the traders), so you type it once a day in *Rates*. After that, every sheet updates by itself: salary in DZD, EUR in bank, EUR debts, savings, zakat and the charts.
 - **Official USD → EUR and EUR → DZD: yes.** They update by themselves in Google Sheets, on Google's servers, so it works with the laptop off. In Excel for Windows only USD → EUR updates by itself. Anywhere else, the workbook uses the numbers you type in *Settings*.
 
-## Use it on your phone (laptop off)
+## Google Sheets on your phone (laptop off)
 
-- **Excel app:** put the file in OneDrive and open it with the free Microsoft Excel app.
-- **Google Sheets:** upload it to Google Drive, then choose *File → Save as Google Sheets*. Use the free Google Sheets app. The official rates update automatically.
+1. Upload the file to Google Drive, open it, then choose **File → Save as Google Sheets**. Use only the new copy, the one without the *.XLSX* label.
+2. Go to **File → Settings → Locale** and choose **Algeria** (or France) so dates are day/month/year.
+3. Use **Share** to add Bouchra as an *Editor*, so you can both write from your phones.
+4. Install the free Google Sheets app. Each morning, add the date and the square price in **Rates**.
+
+If a dropdown arrow is missing after the conversion, select the column, then go to **Data → Data validation → Dropdown (from a range)** and pick the list in *Settings*.
 
 ## Rebuild the workbook (optional)
 
