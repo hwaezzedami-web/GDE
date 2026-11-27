@@ -1,5 +1,9 @@
 # Personal Finance — Aboubakr & Bouchra · المالية الشخصية
 
+**Phone app (main tool):** https://claude.ai/artifact/DPUkLv72xGGgv9eagGNDdj. The source is in `app/wallet.html`. The data is saved online in the artifact's database, so the app works with the laptop off, and it can be shared with Bouchra (invite her as Editor). The *Settings* screen in the app exports everything to Excel.
+
+The Excel workbook below is the original spreadsheet version.
+
 **File:** `Personal_Finance_Aboubakr_Bouchra.xlsx`. It is bilingual (English and Arabic), has 15 sheets, and every number is a live Excel formula.
 
 ## Sheets — الأوراق
