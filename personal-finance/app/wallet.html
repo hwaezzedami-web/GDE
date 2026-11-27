@@ -228,12 +228,16 @@ const L = {
     converter: "Converter", eurToDa: "Euros you sell", daToEur: "Dinars to change", usdToDa: "Dollars you sell", history: "History", official: "Official",
     seg: { salary: "Salary", sales: "Conversions", months: "12 months", exp: "Expenses", rel: "Relatives", bud: "Budget", open: "Open", paid: "Paid", all: "All" },
     calc: "Salary value", atOfficial: "At the official rate", extra: "Extra from the square", salaryEur: "Salary in euros", addSalary: "Add this month's salary",
+    salaryFor: "Salary for {m}", receivedOn: "received {d}", expectedOn: "expected {d}", nextSalary: "Next salary", nextSalaryLine: "{m} salary · {d}",
+    inDays: "arrives in {n} days", arrivesToday: "arrives today", salaryDue: "It was due on {d}. Did it arrive? Tap to add it.",
+    salaryRule: "The salary for a month arrives on day {d} of {when}. The app files it under the month you worked (for example November) and adds it to your bank and to that month's totals on the day it arrives (for example 15 December).",
+    whenNext: "the next month", whenSame: "the same month", payDay: "Salary arrives on day (1–31)", payLag: "In which month? 1 = the month after, 0 = the same month", payDayShort: "Payday", payDayText: "day {d} of {when}",
     calcNote: "What your salary is worth at today's price. You keep the euros in the bank and convert only what you need, when you need it.",
     cashT: "Dinars in hand", cashFix: "Correct the amount", cashFixLabel: "How many dinars do you really have now?", convertedM: "converted this month",
     cashNote: "Dinars from conversions and income, minus expenses, help and savings. If you lend, borrow or repay a debt in cash, correct the amount here.",
     sellGet: "You get {v}", inBank: "In your bank: {v}", sellOver: "That is more than the {v} in your bank.",
     addSale: "Convert euros to dinars", eurSold: "EUR converted", daReceived: "Dinars received", avgRate: "Average rate", vsMarket: "vs market", valueToday: "worth today",
-    expected: "expected", received: "received", inL: "In", outL: "Out", netL: "Net", helpL: "Help", savedL: "Saved", spentL: "Spent",
+    expected: "estimated amount", received: "exact amount", inL: "In", outL: "Out", netL: "Net", helpL: "Help", savedL: "Saved", spentL: "Spent",
     addExpense: "Add expense", addHelp: "Add help", thisMonth: "This month", thisYear: "This year", byRelation: "By relation", income: "Income", expense: "Expense",
     setBudget: "Tap a category to set its budget.", over: "Over", near: "Near limit", ok: "OK", uncategorized: "No category", total: "Total", byPerson: "By person",
     owe: "I owe", owed: "Owed to me", open: "Open", paid: "Paid", overdue: "Overdue", soon: "Due soon", addDebt: "Add debt", addPayment: "Add payment", payments: "Payments",
@@ -252,7 +256,7 @@ const L = {
     deleted: "Deleted", alsoPayments: "Its {n} payments are deleted too.", alsoSavings: "Its {n} savings are deleted too.",
     empty: { rates: "No prices yet.", expenses: "No expenses this month. Add the first one.", help: "No help recorded this month.", debts: "No debts here. When you lend or borrow money, add it.",
       goals: "No goals yet. Umrah, a car, a house, an emergency fund: add the first one.", salary: "No salary months yet. Add one when your salary arrives.", sales: "No sales yet. Add a line each time you sell euros." },
-    f: { needDa: "Dinars I need (optional)", date: "Date", eur: "EUR → DA, you sell (the main price)", eurBuy: "EUR price, you buy (optional)", usd: "USD → DA, you sell (optional)", note: "Note", month: "Month",
+    f: { needDa: "Dinars I need (optional)", date: "Date", eur: "EUR → DA, you sell (the main price)", eurBuy: "EUR price, you buy (optional)", usd: "USD → DA, you sell (optional)", note: "Note", month: "Salary for the month of", received: "Date it arrived in the bank",
       usdAmt: "Salary (USD)", usdEur: "USD → EUR rate", eurReal: "EUR actually received (optional)", cur: "Currency", amount: "Amount", rate: "Rate you got (DA)", place: "Place or buyer",
       kind: "Type", who: "Who", cat: "Category", desc: "Description", pay: "Paid with", name: "Name", rel: "Relation", htype: "Kind of help", dir: "Type", person: "Person", phone: "Phone",
       due: "Planned return date", target: "Target amount (DA)", start: "Start date", goalDue: "Target date", prio: "Priority", goal: "Goal", kept: "Where the money is", savAmt: "Amount (use − to take out)", budgetAmt: "Monthly budget (DA)" },
@@ -287,12 +291,16 @@ const L = {
     converter: "محول العملات", eurToDa: "أورو تبيعه", daToEur: "دينار تريد صرفه", usdToDa: "دولار تبيعه", history: "السجل", official: "الرسمي",
     seg: { salary: "الراتب", sales: "التحويلات", months: "12 شهرا", exp: "المصاريف", rel: "الأقارب", bud: "الميزانية", open: "مفتوحة", paid: "مسددة", all: "الكل" },
     calc: "قيمة الراتب", atOfficial: "بالسعر الرسمي", extra: "الفرق لصالحك من السكوار", salaryEur: "الراتب بالأورو", addSalary: "أضف راتب هذا الشهر",
+    salaryFor: "راتب {m}", receivedOn: "وصل {d}", expectedOn: "متوقع {d}", nextSalary: "الراتب القادم", nextSalaryLine: "راتب {m} · {d}",
+    inDays: "يصل بعد {n} يوم", arrivesToday: "يصل اليوم", salaryDue: "كان موعده {d}. هل وصل؟ اضغط لإضافته.",
+    salaryRule: "راتب كل شهر يصل يوم {d} من {when}. التطبيق يسجله باسم الشهر الذي عملت فيه (مثلا نوفمبر) ويضيفه إلى البنك وإلى مجموع الشهر يوم وصوله (مثلا 15 ديسمبر).",
+    whenNext: "الشهر التالي", whenSame: "نفس الشهر", payDay: "يصل الراتب يوم (1–31)", payLag: "في أي شهر؟ 1 = الشهر التالي، 0 = نفس الشهر", payDayShort: "يوم الراتب", payDayText: "يوم {d} من {when}",
     calcNote: "قيمة راتبك بسعر اليوم. تترك الأورو في البنك وتحوّل فقط ما تحتاجه عند الحاجة.",
     cashT: "الدينار عندك", cashFix: "صحّح المبلغ", cashFixLabel: "كم دينار عندك الآن فعلا؟", convertedM: "حوّلتها هذا الشهر",
     cashNote: "الدينار من التحويلات والدخل، ناقص المصاريف والمساعدات والادخار. إذا سلّفت أو تسلفت أو سددت دينا نقدا، صحّح المبلغ من هنا.",
     sellGet: "ستحصل على {v}", inBank: "في البنك: {v}", sellOver: "هذا أكثر من {v} الموجود في البنك.",
     addSale: "حوّل أورو إلى دينار", eurSold: "الأورو المحوّل", daReceived: "الدينار المستلم", avgRate: "متوسط السعر", vsMarket: "مقارنة بالسوق", valueToday: "قيمته اليوم",
-    expected: "متوقع", received: "مستلم", inL: "دخل", outL: "خرج", netL: "الصافي", helpL: "مساعدة", savedL: "ادخار", spentL: "مصاريف",
+    expected: "مبلغ تقديري", received: "المبلغ الحقيقي", inL: "دخل", outL: "خرج", netL: "الصافي", helpL: "مساعدة", savedL: "ادخار", spentL: "مصاريف",
     addExpense: "أضف مصروفا", addHelp: "أضف مساعدة", thisMonth: "هذا الشهر", thisYear: "هذه السنة", byRelation: "حسب القرابة", income: "دخل", expense: "مصروف",
     setBudget: "اضغط على فئة لتحديد ميزانيتها.", over: "تجاوز", near: "قريب من الحد", ok: "جيد", uncategorized: "بدون فئة", total: "المجموع", byPerson: "حسب الشخص",
     owe: "عليّ", owed: "لي", open: "مفتوح", paid: "مسدد", overdue: "متأخر", soon: "قريب", addDebt: "أضف دينا", addPayment: "أضف دفعة", payments: "الدفعات",
@@ -311,7 +319,7 @@ const L = {
     deleted: "تم الحذف", alsoPayments: "تُحذف معه {n} دفعات.", alsoSavings: "تُحذف معه {n} عمليات ادخار.",
     empty: { rates: "لا توجد أسعار بعد.", expenses: "لا مصاريف هذا الشهر. أضف أول مصروف.", help: "لا مساعدة مسجلة هذا الشهر.", debts: "لا ديون هنا. عندما تسلف أو تتسلف مالا أضفه.",
       goals: "لا أهداف بعد. عمرة، سيارة، سكن، صندوق طوارئ: أضف أول هدف.", salary: "لا رواتب بعد. أضف الشهر عند وصول الراتب.", sales: "لا عمليات بيع بعد. أضف سطرا كلما بعت الأورو." },
-    f: { needDa: "الدينار الذي أحتاجه (اختياري)", date: "التاريخ", eur: "سعر بيع 1 € بالدينار (السعر الأساسي)", eurBuy: "سعر شراء 1 € (اختياري)", usd: "سعر بيع 1 $ بالدينار (اختياري)", note: "ملاحظة", month: "الشهر",
+    f: { needDa: "الدينار الذي أحتاجه (اختياري)", date: "التاريخ", eur: "سعر بيع 1 € بالدينار (السعر الأساسي)", eurBuy: "سعر شراء 1 € (اختياري)", usd: "سعر بيع 1 $ بالدينار (اختياري)", note: "ملاحظة", month: "راتب شهر", received: "تاريخ وصوله إلى البنك",
       usdAmt: "الراتب (دولار)", usdEur: "سعر تحويل الدولار ← الأورو", eurReal: "الأورو المستلم فعلا (اختياري)", cur: "العملة", amount: "المبلغ", rate: "السعر الذي أخذته (دج)", place: "المكان أو المشتري",
       kind: "النوع", who: "من", cat: "الفئة", desc: "الوصف", pay: "طريقة الدفع", name: "الاسم", rel: "القرابة", htype: "نوع المساعدة", dir: "النوع", person: "الشخص", phone: "الهاتف",
       due: "تاريخ الإرجاع المخطط", target: "المبلغ المطلوب (دج)", start: "تاريخ البداية", goalDue: "التاريخ المستهدف", prio: "الأولوية", goal: "الهدف", kept: "أين المال", savAmt: "المبلغ (− للسحب)", budgetAmt: "الميزانية الشهرية (دج)" },
@@ -333,7 +341,7 @@ const L = {
 
 /* ------------------------------------------------------------------ state */
 const DEFAULTS = { salaryUsd: 2700, usdEur: 0.909, fee: 0, official: 151, dueSoon: 7, meName: "Aboubakr", wifeName: "Bouchra", meNameAr: "أبوبكر", wifeNameAr: "بشرى",
-  budgets: {}, zakat: { cash: 0, gold: 0, goldPrice: 18000 }, cashAdjust: 0 };
+  budgets: {}, zakat: { cash: 0, gold: 0, goldPrice: 18000 }, cashAdjust: 0, payDay: 15, payLag: 1 };
 const COLLS = ["rates", "salary", "sales", "expenses", "help", "debts", "payments", "goals", "savings"];
 const ROUTES = ["home", "rates", "money", "family", "debts", "plans", "prefs"];
 const store = {
@@ -431,8 +439,25 @@ function salaryCalc(R) {
   const eur = num(S.cfg.salaryUsd) * num(S.cfg.usdEur) * (1 - num(S.cfg.fee) / 100);
   return { usd: num(S.cfg.salaryUsd), eur, da: eur * R.eur, official: eur * num(S.cfg.official) };
 }
+function payDate(ym) {
+  const lag = Math.min(2, Math.max(0, Math.round(S.cfg.payLag === undefined || S.cfg.payLag === "" ? 1 : num(S.cfg.payLag))));
+  const day = Math.min(31, Math.max(1, Math.round(num(S.cfg.payDay) || 15)));
+  const m = addMonths(ym, lag), [y, mo] = m.split("-").map(Number);
+  return `${m}-${pad(Math.min(day, new Date(Date.UTC(y, mo, 0)).getUTCDate()))}`;
+}
+const recvDate = (r) => r.received || (r.month ? payDate(r.month) : "");
+function nextSalary() {
+  const today = todayStr();
+  const months = S.data.salary.map((r) => r.month).filter(Boolean).sort();
+  let m;
+  if (months.length) m = addMonths(months[months.length - 1], 1);
+  else { m = addMonths(today.slice(0, 7), -3); while (payDate(m) < today) m = addMonths(m, 1); }
+  const date = payDate(m);
+  return { month: m, date, days: daysBetween(today, date) };
+}
 function eurBalance() {
-  const rec = S.data.salary.reduce((s, r) => s + salaryEur(r), 0);
+  const today = todayStr();
+  const rec = S.data.salary.filter((r) => recvDate(r) <= today).reduce((s, r) => s + salaryEur(r), 0);
   const sold = S.data.sales.filter((x) => (x.cur || "EUR") === "EUR").reduce((s, x) => s + num(x.amount), 0);
   return rec - sold;
 }
@@ -480,7 +505,7 @@ function goalList(R) {
 }
 function monthSummary(ym, R) {
   const inM = (d) => ymOf(d) === ym;
-  const sal = S.data.salary.filter((r) => r.month === ym).reduce((s, r) => s + salaryEur(r), 0);
+  const sal = S.data.salary.filter((r) => ymOf(recvDate(r)) === ym).reduce((s, r) => s + salaryEur(r), 0);
   const sales = S.data.sales.filter((x) => inM(x.date));
   const eurSold = sales.filter((x) => (x.cur || "EUR") === "EUR").reduce((s, x) => s + num(x.amount), 0);
   const daSales = sales.reduce((s, x) => s + num(x.amount) * num(x.rate), 0);
@@ -526,6 +551,13 @@ function board(R) {
     <button class="btn light cta" type="button" data-write data-act="form" data-form="rate">${ic("plus")}${esc(age > 0 ? t("addPrice") : t("updatePrice"))}</button>
   </section>`;
 }
+function salaryTile() {
+  const N = nextSalary(), due = N.days <= 0;
+  const when = N.days > 0 ? t("inDays", { n: N.days }) : N.days === 0 ? t("arrivesToday") : t("salaryDue", { d: dmy(N.date) });
+  return `<button class="tile ${due ? "stripe-warn" : ""}" type="button" ${due ? 'data-write data-act="form" data-form="salary"' : 'data-act="go" data-to="money" data-tab="salary"'}>
+    <span class="k">${esc(t("nextSalary"))}</span><span class="v" style="font-size:17px">${esc(t("nextSalaryLine", { m: monthName(N.month), d: dmy(N.date) }))}</span>
+    <span class="s">${esc(when)}</span></button>`;
+}
 function vHome() {
   const R = rateInfo(), bal = eurBalance(), cash = cashInHand(), M = monthSummary(S.month, R), D = debtList(R), G = goalList(R);
   const owe = D.filter((d) => d.dir === "owe"), owed = D.filter((d) => d.dir !== "owe");
@@ -544,6 +576,7 @@ function vHome() {
     <button class="tile bad" type="button" data-act="go" data-to="debts"><span class="k">${esc(t("iOwe"))}</span><span class="v">${esc(da(sumRem(owe)))}</span><span class="s">${esc(t("overdueN", { n: cnt(owe, "overdue") }))} · ${esc(t("openN", { n: owe.filter((d) => d.status !== "paid").length }))}</span></button>
     <button class="tile good" type="button" data-act="go" data-to="debts"><span class="k">${esc(t("owedMe"))}</span><span class="v">${esc(da(sumRem(owed)))}</span><span class="s">${esc(t("overdueN", { n: cnt(owed, "overdue") }))} · ${esc(t("openN", { n: owed.filter((d) => d.status !== "paid").length }))}</span></button>
   </div>
+  ${salaryTile()}
   <button class="tile" type="button" data-act="go" data-to="plans"><span class="k">${esc(t("savings"))}</span><span class="v">${esc(da(goalsSaved))}</span>
     <span class="s">${esc(goalsTarget > 0 ? t("ofGoals", { p: nf((goalsSaved / goalsTarget) * 100), v: da(goalsTarget) }) : t("noGoals"))}</span>
     ${goalsTarget > 0 ? `<span class="bar"><i style="width:${Math.min(100, (goalsSaved / goalsTarget) * 100).toFixed(1)}%"></i></span>` : ""}</button>
@@ -627,11 +660,15 @@ function vMoney() {
       <dt class="total">${esc(t("salaryDzd"))}</dt><dd class="total">${esc(da(sc.da))}<br><span class="small muted">${esc(millions(sc.da))}</span></dd>
       <dt>${esc(t("atOfficial"))} (${esc(nf(S.cfg.official))})</dt><dd>${esc(da(sc.official))}</dd>
       <dt>${esc(t("extra"))}</dt><dd class="a good">+${esc(da(sc.da - sc.official))}</dd></dl><p class="small muted">${esc(t("calcNote"))}</p></section>
+      ${salaryTile()}
+      <p class="banner info">${esc(t("salaryRule", { d: num(S.cfg.payDay) || 15, when: num(S.cfg.payLag) === 0 ? t("whenSame") : t("whenNext") }))}</p>
       <button class="btn block" type="button" data-write data-act="form" data-form="salary">${ic("plus")}${esc(t("addSalary"))}</button>
       <section class="card"><h2>${esc(t("seg.salary"))}</h2>${rows.length ? `<div class="list">${rows.map((r) => {
         const e = salaryEur(r);
-        return `<button class="item" type="button" data-act="edit" data-form="salary" data-id="${esc(r.id)}"><span class="t">${esc(monthName(r.month))}</span><span class="a euro">${esc(eu(e))}</span>
-          <span class="m"><span>${esc(num(r.eurReal) > 0 ? t("received") : t("expected"))}</span><span>· ${esc(t("valueToday"))} ${esc(da(e * R.eur))}</span></span></button>`; }).join("")}</div>`
+        const rd = recvDate(r), arrived = rd <= todayStr();
+        return `<button class="item" type="button" data-act="edit" data-form="salary" data-id="${esc(r.id)}"><span class="t">${esc(t("salaryFor", { m: monthName(r.month) }))}</span><span class="a euro">${esc(eu(e))}</span>
+          <span class="m">${arrived ? `<span class="tag good">${esc(t("receivedOn", { d: dmy(rd) }))}</span>` : `<span class="tag warn">${esc(t("expectedOn", { d: dmy(rd) }))}</span>`}
+          <span>${esc(num(r.eurReal) > 0 ? t("received") : t("expected"))} · ${esc(t("valueToday"))} ${esc(da(e * R.eur))}</span></span></button>`; }).join("")}</div>`
         : empty("money", t("empty.salary"))}</section>`;
   } else if (S.moneyTab === "sales") {
     const rows = S.data.sales.slice().sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : num(b.ts) - num(a.ts)));
@@ -789,6 +826,7 @@ function vPrefs() {
   <section class="card"><h2>${esc(t("language"))}</h2><div class="pills" role="group">${langPills}</div></section>
   <section class="card"><h2>${esc(t("money2"))}<button class="link" type="button" data-write data-act="cfg">${esc(t("edit"))}</button></h2><dl class="kv">
     <dt>${esc(t("salaryUsd"))}</dt><dd>${esc(nf(c.salaryUsd))} $</dd><dt>${esc(t("usdEur"))}</dt><dd>${esc(nf(c.usdEur, 4))}</dd>
+    <dt>${esc(t("payDayShort"))}</dt><dd>${esc(t("payDayText", { d: num(c.payDay) || 15, when: num(c.payLag) === 0 ? t("whenSame") : t("whenNext") }))}</dd>
     <dt>${esc(t("fee"))}</dt><dd>${esc(nf(c.fee, 2))}%</dd><dt>${esc(t("official2"))}</dt><dd>${esc(nf(c.official, 2))}</dd>
     <dt>${esc(t("dueSoon"))}</dt><dd>${esc(nf(c.dueSoon))}</dd><dt>${esc(t("names"))}</dt><dd>${esc(nameMe())} · ${esc(nameWife())}</dd></dl></section>
   <section class="card"><h2>${esc(t("exportT"))}</h2><p class="small muted">${esc(t("exportNote"))}</p><button class="btn block" type="button" data-act="export" id="exportBtn">${ic("download")}${esc(t("exportB"))}</button></section>
@@ -803,8 +841,8 @@ const curOpts = (withDzd) => () => (withDzd ? [["DZD", "DZD (" + t("da") + ")"],
 const FORMS = {
   rate: { coll: "rates", fields: [["date", "date", 1], ["eur", "num", 1, "big"], ["eurBuy", "num"], ["usd", "num"], ["note", "text"]],
     defaults: () => { const R = rateInfo(); return { date: todayStr(), eur: R.eur || "", eurBuy: R.eur && R.buy !== R.eur ? R.buy : "", usd: R.usdEstimated ? "" : R.usd }; }, hint: { eur: "eurHint" } },
-  salary: { coll: "salary", fields: [["month", "month", 1], ["usdAmt", "num", 1, null, "usd"], ["usdEur", "num", 1], ["eurReal", "num"], ["note", "text"]],
-    defaults: () => ({ month: todayStr().slice(0, 7), usd: S.cfg.salaryUsd, usdEur: S.cfg.usdEur }) },
+  salary: { coll: "salary", fields: [["month", "month", 1], ["received", "date", 1], ["usdAmt", "num", 1, null, "usd"], ["usdEur", "num", 1], ["eurReal", "num"], ["note", "text"]],
+    defaults: () => { const N = nextSalary(); return { month: N.month, received: N.days <= 0 ? todayStr() : N.date, usd: S.cfg.salaryUsd, usdEur: S.cfg.usdEur }; } },
   sale: { coll: "sales", fields: [["cur", "select", 1, curOpts(false)], ["needDa", "num", 0], ["amount", "num", 1, "big"], ["rate", "num", 1], ["date", "date", 1], ["place", "text"], ["note", "text"]],
     defaults: () => ({ date: todayStr(), cur: "EUR", rate: rateInfo().eur || "" }) },
   expense: { coll: "expenses", fields: [["amount", "num", 1, "big"], ["kind", "select", 1, () => [["expense", t("kinds.expense")], ["income", t("kinds.income")]]],
@@ -856,7 +894,7 @@ function renderSheet() {
       ${sh.id && sh.confirm && sh.note ? `<p class="small muted">${esc(sh.note)}</p>` : ""}</form>`;
   } else if (sh.type === "cfg" || sh.type === "zakat" || sh.type === "budget" || sh.type === "cashfix") {
     const fields = sh.type === "cfg"
-      ? [["salaryUsd", 1], ["usdEur", 1], ["fee", 0], ["official2", 1, "official"], ["dueSoon", 1], ["meName", 0], ["wifeName", 0], ["meNameAr", 0], ["wifeNameAr", 0]]
+      ? [["salaryUsd", 1], ["usdEur", 1], ["payDay", 1], ["payLag", 0], ["fee", 0], ["official2", 1, "official"], ["dueSoon", 1], ["meName", 0], ["wifeName", 0], ["meNameAr", 0], ["wifeNameAr", 0]]
       : sh.type === "zakat" ? [["zCash", 0, "cash"], ["zGold", 0, "gold"], ["zGoldPrice", 1, "goldPrice"]] : sh.type === "cashfix" ? [["cashFixLabel", 1, "cash"]] : [["f.budgetAmt", 0, "amount"]];
     const title = sh.type === "cfg" ? t("money2") : sh.type === "zakat" ? t("zakat") : sh.type === "cashfix" ? t("cashT") : listLabel("cat", sh.cat);
     html = sheetHead(title) + `<form id="theForm" class="conv" novalidate>${fields.map(([lab, req, key]) => {
@@ -992,12 +1030,13 @@ async function submitForm() {
     }
     if (sh.kind === "payment") out.debtId = sh.vals.debtId;
     if (sh.kind === "sale") delete out.needDa;
+    if (sh.kind === "salary" && !out.received) out.received = payDate(out.month);
     if (sh.kind === "expense" && out.kind === "income") out.cat = "";
     const keep = sh.id ? { ts: sh.vals.ts } : {};
     const ok = await saveDoc(F.coll, sh.id, { ...keep, ...out });
     if (ok) { toast(t("saved2")); closeSheet(); }
   } else {
-    const keys = sh.type === "cfg" ? ["salaryUsd", "usdEur", "fee", "official", "dueSoon", "meName", "wifeName", "meNameAr", "wifeNameAr"]
+    const keys = sh.type === "cfg" ? ["salaryUsd", "usdEur", "payDay", "payLag", "fee", "official", "dueSoon", "meName", "wifeName", "meNameAr", "wifeNameAr"]
       : sh.type === "zakat" ? ["cash", "gold", "goldPrice"] : sh.type === "cashfix" ? ["cash"] : ["amount"];
     const vals = {};
     for (const k of keys) {
@@ -1010,6 +1049,8 @@ async function submitForm() {
     let patch;
     if (sh.type === "cfg") {
       if (!(vals.salaryUsd > 0) || !(vals.usdEur > 0) || !(vals.official > 0)) return toast(t("required", { f: t("money2") }));
+      if (!(vals.payDay >= 1 && vals.payDay <= 31)) return toast(t("badNum", { f: t("payDay") }));
+      vals.payDay = Math.round(vals.payDay); vals.payLag = Math.min(2, Math.round(vals.payLag));
       patch = vals;
     } else if (sh.type === "zakat") patch = { zakat: vals };
     else if (sh.type === "cashfix") patch = { cashAdjust: Math.round((vals.cash - cashInHand(false)) * 100) / 100 };
@@ -1054,8 +1095,8 @@ async function exportXlsx() {
   const sheets = [
     ["Rates", ["Date - التاريخ", "EUR sell (DA) - بيع الأورو", "EUR buy (DA) - شراء الأورو", "USD sell (DA) - بيع الدولار", "Note - ملاحظة"],
       R.list.map((r) => [r.date, num(r.eur), num(r.eurBuy) || "", num(r.usd) || "", r.note || ""])],
-    ["Salary", ["Month - الشهر", "Salary USD - الراتب", "USD→EUR", "EUR - الأورو", "Worth today (DA) - القيمة اليوم", "Note"],
-      S.data.salary.slice().sort(byDate).map((r) => [r.month, num(r.usd), num(r.usdEur), +salaryEur(r).toFixed(2), Math.round(salaryEur(r) * R.eur), r.note || ""])],
+    ["Salary", ["Salary for month - راتب شهر", "Arrived - تاريخ الوصول", "Salary USD - الراتب", "USD→EUR", "EUR - الأورو", "Worth today (DA) - القيمة اليوم", "Note"],
+      S.data.salary.slice().sort(byDate).map((r) => [r.month, recvDate(r), num(r.usd), num(r.usdEur), +salaryEur(r).toFixed(2), Math.round(salaryEur(r) * R.eur), r.note || ""])],
     ["Exchange", ["Date - التاريخ", "Currency - العملة", "Amount - المبلغ", "Rate (DA) - السعر", "DA received - الدينار", "Place - المكان", "Note"],
       S.data.sales.slice().sort(byDate).map((x) => [x.date, x.cur || "EUR", num(x.amount), num(x.rate), Math.round(num(x.amount) * num(x.rate)), x.place || "", x.note || ""])],
     ["Family", ["Date - التاريخ", "Type - النوع", "Who - من", "Category - الفئة", "Description - الوصف", "Amount (DA) - المبلغ", "Paid with - الدفع"],

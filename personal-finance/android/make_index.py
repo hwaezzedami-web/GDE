@@ -49,7 +49,7 @@ rep('''  <section class="card"><h2>${esc(t("shareT"))}</h2><p class="small">${es
     <div class="actions"><button class="btn" type="button" data-act="backup">${ic("download")}${esc(t("backupB"))}</button>
     <button class="btn ghost" type="button" data-act="restore">${esc(t("restoreB"))}</button></div>
     <input type="file" id="restoreFile" accept=".json,application/json,text/plain" hidden></section>
-  <section class="card"><h2>${esc(t("phoneT"))}</h2><p class="small">${esc(t("phoneNote"))}</p><p class="small muted">${esc(t("version"))} 1.1</p></section>`;''')
+  <section class="card"><h2>${esc(t("phoneT"))}</h2><p class="small">${esc(t("phoneNote"))}</p><p class="small muted">${esc(t("version"))} 1.2</p></section>`;''')
 
 # 4. Excel export with the bundled library and the phone's save screen
 rep('''  const dl = window.claude && window.claude.use ? await window.claude.use("downloads") : null;
