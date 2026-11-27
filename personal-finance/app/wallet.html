@@ -354,7 +354,13 @@ const num = (x) => { const n = typeof x === "number" ? x : parseFloat(x); return
 function parseNum(s) {
   if (s == null) return NaN;
   let v = String(s).trim().replace(/[٠-٩]/g, (d) => d.charCodeAt(0) - 0x660).replace(/[۰-۹]/g, (d) => d.charCodeAt(0) - 0x6f0)
-    .replace(/[٫]/g, ".").replace(/[\s,'٬]/g, "").replace(/−/g, "-");
+    .replace(/[٫]/g, ".").replace(/[\s'٬]/g, "").replace(/−/g, "-");
+  if (v.includes(",") && v.includes(".")) {
+    v = v.lastIndexOf(",") > v.lastIndexOf(".") ? v.replace(/\./g, "").replace(",", ".") : v.replace(/,/g, "");
+  } else if (v.includes(",")) {
+    const parts = v.split(",");
+    v = parts.length === 2 && (parts[1].length !== 3 || /^-?0$/.test(parts[0])) ? parts[0] + "." + parts[1] : parts.join("");
+  }
   if (v === "") return NaN;
   let mult = 1;
   if (/k$/i.test(v)) { mult = 1e3; v = v.slice(0, -1); }

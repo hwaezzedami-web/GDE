@@ -2,6 +2,8 @@
 
 **Phone app (main tool):** https://claude.ai/artifact/DPUkLv72xGGgv9eagGNDdj. The source is in `app/wallet.html`. The data is saved online in the artifact's database, so the app works with the laptop off, and it can be shared with Bouchra (invite her as Editor). The *Settings* screen in the app exports everything to Excel.
 
+**Android app:** `Family_Wallet.apk`. It's the same wallet as an installable app. It works offline and keeps its data on the phone (back it up from *Settings → Backup*). The source is in `android/`; rebuild it with `android/build.sh`. The signing key is not in git, so a version built in another session can't install over this one: save a backup first, uninstall the old app, install the new one, then restore.
+
 The Excel workbook below is the original spreadsheet version.
 
 **File:** `Personal_Finance_Aboubakr_Bouchra.xlsx`. It is bilingual (English and Arabic), has 15 sheets, and every number is a live Excel formula.
