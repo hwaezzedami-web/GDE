@@ -56,6 +56,7 @@ main { display: grid; gap: 14px; padding-block: 14px; padding-left: max(16px, en
 .card h2 { font-size: 15px; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; justify-content: space-between; }
 .card h2 .link { font-family: var(--font-body); font-size: 13px; font-weight: 500; color: var(--accent); background: none; border: 0; cursor: pointer; padding: 4px; }
 .muted { color: var(--muted); }
+.linkbtn { border: 0; background: none; color: var(--accent); font-weight: 600; padding: 4px 0; cursor: pointer; font-size: 13px; }
 .small { font-size: 12.5px; }
 
 /* the square board */
@@ -217,14 +218,18 @@ const L = {
     salaryDzd: "Salary in dinars", eurBank: "EUR still in bank", spent: "Family spending", net: "Net this month", iOwe: "I owe", owedMe: "Owed to me", savings: "Saved for goals",
     millions: "≈ {v} million centimes", budgetUsed: "{p}% of budget", noBudget: "No budget set", inOut: "In {a} · Out {b}", overdueN: "{n} overdue", openN: "{n} open",
     ofGoals: "{p}% of {v}", noGoals: "No goals yet", atRate: "≈ {v} at today's price",
-    quick: "Add quickly", q: { price: "Price", expense: "Expense", sale: "Sell €", debt: "Debt", saving: "Saving", help: "Help family" },
+    quick: "Add quickly", q: { price: "Price", expense: "Expense", sale: "Convert €", debt: "Debt", saving: "Saving", help: "Help family" },
     nextDebts: "Next debts", seeAll: "See all", noOpenDebts: "No open debts.",
     rateNote: "The square price has no live source on the internet that apps can read. Add it once a day and every number updates.",
     chartTitle: "Price, last 60 days", stats: "Price statistics", avg7: "7-day average", avg30: "30-day average", low30: "30-day low", high30: "30-day high", premium: "Above official rate",
     converter: "Converter", eurToDa: "Euros you sell", daToEur: "Dinars to change", usdToDa: "Dollars you sell", history: "History", official: "Official",
-    seg: { salary: "Salary", sales: "Selling €", months: "12 months", exp: "Expenses", rel: "Relatives", bud: "Budget", open: "Open", paid: "Paid", all: "All" },
-    calc: "Salary calculator", atOfficial: "At the official rate", extra: "Extra from the square", salaryEur: "Salary in euros", addSalary: "Add this month's salary",
-    addSale: "Sell euros", eurSold: "EUR sold", daReceived: "Dinars received", avgRate: "Average rate", vsMarket: "vs market", valueToday: "worth today",
+    seg: { salary: "Salary", sales: "Conversions", months: "12 months", exp: "Expenses", rel: "Relatives", bud: "Budget", open: "Open", paid: "Paid", all: "All" },
+    calc: "Salary value", atOfficial: "At the official rate", extra: "Extra from the square", salaryEur: "Salary in euros", addSalary: "Add this month's salary",
+    calcNote: "What your salary is worth at today's price. You keep the euros in the bank and convert only what you need, when you need it.",
+    cashT: "Dinars in hand", cashFix: "Correct the amount", cashFixLabel: "How many dinars do you really have now?", convertedM: "converted this month",
+    cashNote: "Dinars from conversions and income, minus expenses, help and savings. If you lend, borrow or repay a debt in cash, correct the amount here.",
+    sellGet: "You get {v}", inBank: "In your bank: {v}", sellOver: "That is more than the {v} in your bank.",
+    addSale: "Convert euros to dinars", eurSold: "EUR converted", daReceived: "Dinars received", avgRate: "Average rate", vsMarket: "vs market", valueToday: "worth today",
     expected: "expected", received: "received", inL: "In", outL: "Out", netL: "Net", helpL: "Help", savedL: "Saved", spentL: "Spent",
     addExpense: "Add expense", addHelp: "Add help", thisMonth: "This month", thisYear: "This year", byRelation: "By relation", income: "Income", expense: "Expense",
     setBudget: "Tap a category to set its budget.", over: "Over", near: "Near limit", ok: "OK", uncategorized: "No category", total: "Total", byPerson: "By person",
@@ -244,11 +249,11 @@ const L = {
     deleted: "Deleted", alsoPayments: "Its {n} payments are deleted too.", alsoSavings: "Its {n} savings are deleted too.",
     empty: { rates: "No prices yet.", expenses: "No expenses this month. Add the first one.", help: "No help recorded this month.", debts: "No debts here. When you lend or borrow money, add it.",
       goals: "No goals yet. Umrah, a car, a house, an emergency fund: add the first one.", salary: "No salary months yet. Add one when your salary arrives.", sales: "No sales yet. Add a line each time you sell euros." },
-    f: { date: "Date", eur: "EUR → DA, you sell (the main price)", eurBuy: "EUR price, you buy (optional)", usd: "USD → DA, you sell (optional)", note: "Note", month: "Month",
+    f: { needDa: "Dinars I need (optional)", date: "Date", eur: "EUR → DA, you sell (the main price)", eurBuy: "EUR price, you buy (optional)", usd: "USD → DA, you sell (optional)", note: "Note", month: "Month",
       usdAmt: "Salary (USD)", usdEur: "USD → EUR rate", eurReal: "EUR actually received (optional)", cur: "Currency", amount: "Amount", rate: "Rate you got (DA)", place: "Place or buyer",
       kind: "Type", who: "Who", cat: "Category", desc: "Description", pay: "Paid with", name: "Name", rel: "Relation", htype: "Kind of help", dir: "Type", person: "Person", phone: "Phone",
       due: "Planned return date", target: "Target amount (DA)", start: "Start date", goalDue: "Target date", prio: "Priority", goal: "Goal", kept: "Where the money is", savAmt: "Amount (use − to take out)", budgetAmt: "Monthly budget (DA)" },
-    form: { rate: "Square price", salary: "Salary month", sale: "Sell currency", expense: "Expense or income", help: "Help for relatives", debt: "Debt", payment: "Payment", goal: "Goal", saving: "Saving", budget: "Budget" },
+    form: { rate: "Square price", salary: "Salary month", sale: "Convert to dinars", expense: "Expense or income", help: "Help for relatives", debt: "Debt", payment: "Payment", goal: "Goal", saving: "Saving", budget: "Budget" },
     eurHint: "Example: 277 means 1 € = 277 DA (100 € = 27,700 DA).",
     dirs: { owe: "I owe (I borrowed)", owed: "Owed to me (I lent)" }, kinds: { expense: "Expense", income: "Income" },
     cat: { food: "Food & groceries", rent: "Rent", power: "Electricity & gas", water: "Water", net: "Internet & phone", transport: "Transport & fuel", health: "Health & pharmacy", clothes: "Clothes",
@@ -277,14 +282,18 @@ const L = {
     salaryDzd: "الراتب بالدينار", eurBank: "الأورو المتبقي في البنك", spent: "مصاريف العائلة", net: "صافي الشهر", iOwe: "عليّ", owedMe: "لي عند الناس", savings: "المدخرات للأهداف",
     millions: "≈ {v} مليون سنتيم", budgetUsed: "{p}% من الميزانية", noBudget: "لا توجد ميزانية", inOut: "دخل {a} · خرج {b}", overdueN: "{n} متأخر", openN: "{n} مفتوح",
     ofGoals: "{p}% من {v}", noGoals: "لا أهداف بعد", atRate: "≈ {v} بسعر اليوم",
-    quick: "إضافة سريعة", q: { price: "السعر", expense: "مصروف", sale: "بيع €", debt: "دين", saving: "ادخار", help: "مساعدة" },
+    quick: "إضافة سريعة", q: { price: "السعر", expense: "مصروف", sale: "تحويل €", debt: "دين", saving: "ادخار", help: "مساعدة" },
     nextDebts: "الديون القادمة", seeAll: "عرض الكل", noOpenDebts: "لا ديون مفتوحة.",
     rateNote: "سعر السكوار ليس له مصدر مباشر على الإنترنت تقرأه التطبيقات. أضفه مرة في اليوم وكل الأرقام تتحدث.",
     chartTitle: "السعر، آخر 60 يوما", stats: "إحصائيات السعر", avg7: "متوسط 7 أيام", avg30: "متوسط 30 يوما", low30: "أدنى سعر (30 يوما)", high30: "أعلى سعر (30 يوما)", premium: "فوق السعر الرسمي",
     converter: "محول العملات", eurToDa: "أورو تبيعه", daToEur: "دينار تريد صرفه", usdToDa: "دولار تبيعه", history: "السجل", official: "الرسمي",
-    seg: { salary: "الراتب", sales: "بيع الأورو", months: "12 شهرا", exp: "المصاريف", rel: "الأقارب", bud: "الميزانية", open: "مفتوحة", paid: "مسددة", all: "الكل" },
-    calc: "حاسبة الراتب", atOfficial: "بالسعر الرسمي", extra: "الفرق لصالحك من السكوار", salaryEur: "الراتب بالأورو", addSalary: "أضف راتب هذا الشهر",
-    addSale: "بيع الأورو", eurSold: "الأورو المباع", daReceived: "الدينار المستلم", avgRate: "متوسط السعر", vsMarket: "مقارنة بالسوق", valueToday: "قيمته اليوم",
+    seg: { salary: "الراتب", sales: "التحويلات", months: "12 شهرا", exp: "المصاريف", rel: "الأقارب", bud: "الميزانية", open: "مفتوحة", paid: "مسددة", all: "الكل" },
+    calc: "قيمة الراتب", atOfficial: "بالسعر الرسمي", extra: "الفرق لصالحك من السكوار", salaryEur: "الراتب بالأورو", addSalary: "أضف راتب هذا الشهر",
+    calcNote: "قيمة راتبك بسعر اليوم. تترك الأورو في البنك وتحوّل فقط ما تحتاجه عند الحاجة.",
+    cashT: "الدينار عندك", cashFix: "صحّح المبلغ", cashFixLabel: "كم دينار عندك الآن فعلا؟", convertedM: "حوّلتها هذا الشهر",
+    cashNote: "الدينار من التحويلات والدخل، ناقص المصاريف والمساعدات والادخار. إذا سلّفت أو تسلفت أو سددت دينا نقدا، صحّح المبلغ من هنا.",
+    sellGet: "ستحصل على {v}", inBank: "في البنك: {v}", sellOver: "هذا أكثر من {v} الموجود في البنك.",
+    addSale: "حوّل أورو إلى دينار", eurSold: "الأورو المحوّل", daReceived: "الدينار المستلم", avgRate: "متوسط السعر", vsMarket: "مقارنة بالسوق", valueToday: "قيمته اليوم",
     expected: "متوقع", received: "مستلم", inL: "دخل", outL: "خرج", netL: "الصافي", helpL: "مساعدة", savedL: "ادخار", spentL: "مصاريف",
     addExpense: "أضف مصروفا", addHelp: "أضف مساعدة", thisMonth: "هذا الشهر", thisYear: "هذه السنة", byRelation: "حسب القرابة", income: "دخل", expense: "مصروف",
     setBudget: "اضغط على فئة لتحديد ميزانيتها.", over: "تجاوز", near: "قريب من الحد", ok: "جيد", uncategorized: "بدون فئة", total: "المجموع", byPerson: "حسب الشخص",
@@ -304,11 +313,11 @@ const L = {
     deleted: "تم الحذف", alsoPayments: "تُحذف معه {n} دفعات.", alsoSavings: "تُحذف معه {n} عمليات ادخار.",
     empty: { rates: "لا توجد أسعار بعد.", expenses: "لا مصاريف هذا الشهر. أضف أول مصروف.", help: "لا مساعدة مسجلة هذا الشهر.", debts: "لا ديون هنا. عندما تسلف أو تتسلف مالا أضفه.",
       goals: "لا أهداف بعد. عمرة، سيارة، سكن، صندوق طوارئ: أضف أول هدف.", salary: "لا رواتب بعد. أضف الشهر عند وصول الراتب.", sales: "لا عمليات بيع بعد. أضف سطرا كلما بعت الأورو." },
-    f: { date: "التاريخ", eur: "سعر بيع 1 € بالدينار (السعر الأساسي)", eurBuy: "سعر شراء 1 € (اختياري)", usd: "سعر بيع 1 $ بالدينار (اختياري)", note: "ملاحظة", month: "الشهر",
+    f: { needDa: "الدينار الذي أحتاجه (اختياري)", date: "التاريخ", eur: "سعر بيع 1 € بالدينار (السعر الأساسي)", eurBuy: "سعر شراء 1 € (اختياري)", usd: "سعر بيع 1 $ بالدينار (اختياري)", note: "ملاحظة", month: "الشهر",
       usdAmt: "الراتب (دولار)", usdEur: "سعر تحويل الدولار ← الأورو", eurReal: "الأورو المستلم فعلا (اختياري)", cur: "العملة", amount: "المبلغ", rate: "السعر الذي أخذته (دج)", place: "المكان أو المشتري",
       kind: "النوع", who: "من", cat: "الفئة", desc: "الوصف", pay: "طريقة الدفع", name: "الاسم", rel: "القرابة", htype: "نوع المساعدة", dir: "النوع", person: "الشخص", phone: "الهاتف",
       due: "تاريخ الإرجاع المخطط", target: "المبلغ المطلوب (دج)", start: "تاريخ البداية", goalDue: "التاريخ المستهدف", prio: "الأولوية", goal: "الهدف", kept: "أين المال", savAmt: "المبلغ (− للسحب)", budgetAmt: "الميزانية الشهرية (دج)" },
-    form: { rate: "سعر السكوار", salary: "راتب شهر", sale: "بيع العملة", expense: "مصروف أو دخل", help: "مساعدة الأقارب", debt: "دين", payment: "دفعة", goal: "هدف", saving: "ادخار", budget: "الميزانية" },
+    form: { rate: "سعر السكوار", salary: "راتب شهر", sale: "تحويل إلى دينار", expense: "مصروف أو دخل", help: "مساعدة الأقارب", debt: "دين", payment: "دفعة", goal: "هدف", saving: "ادخار", budget: "الميزانية" },
     eurHint: "مثال: 277 يعني 1 € = 277 دج (100 € = 27,700 دج).",
     dirs: { owe: "عليّ (تسلفت)", owed: "لي (سلّفت)" }, kinds: { expense: "مصروف", income: "دخل" },
     cat: { food: "المواد الغذائية", rent: "الكراء", power: "الكهرباء والغاز", water: "الماء", net: "الأنترنت والهاتف", transport: "النقل والوقود", health: "الصحة والدواء", clothes: "الملابس",
@@ -331,7 +340,7 @@ const L = {
 
 /* ------------------------------------------------------------------ state */
 const DEFAULTS = { salaryUsd: 2700, usdEur: 0.909, fee: 0, official: 151, dueSoon: 7, meName: "Aboubakr", wifeName: "Bouchra", meNameAr: "أبوبكر", wifeNameAr: "بشرى",
-  budgets: {}, zakat: { cash: 0, gold: 0, goldPrice: 18000 } };
+  budgets: {}, zakat: { cash: 0, gold: 0, goldPrice: 18000 }, cashAdjust: 0 };
 const COLLS = ["rates", "salary", "sales", "expenses", "help", "debts", "payments", "goals", "savings"];
 const ROUTES = ["home", "rates", "money", "family", "debts", "plans", "prefs"];
 const store = {
@@ -344,7 +353,7 @@ const S = {
   cfg: JSON.parse(JSON.stringify(DEFAULTS)),
   data: Object.fromEntries(COLLS.map((c) => [c, []])),
   loaded: {}, confirmed: {}, db: null, dbState: "loading", slow: false, canWrite: null,
-  moneyTab: "salary", famTab: "exp", famWho: "all", debtTab: "open",
+  moneyTab: "sales", famTab: "exp", famWho: "all", debtTab: "open",
   conv: { eur: "100", da: "100000", usd: "100" }, sheet: null, dirty: false,
 };
 
@@ -434,6 +443,15 @@ function eurBalance() {
   const sold = S.data.sales.filter((x) => (x.cur || "EUR") === "EUR").reduce((s, x) => s + num(x.amount), 0);
   return rec - sold;
 }
+function cashInHand(withAdjust = true) {
+  const sum = (a, f) => a.reduce((s, x) => s + f(x), 0);
+  const conv = sum(S.data.sales, (x) => num(x.amount) * num(x.rate));
+  const income = sum(S.data.expenses.filter((x) => x.kind === "income"), (x) => num(x.amount));
+  const spent = sum(S.data.expenses.filter((x) => x.kind !== "income"), (x) => num(x.amount));
+  const help = sum(S.data.help, (x) => num(x.amount));
+  const saved = sum(S.data.savings.filter((x) => (x.cur || "DZD") === "DZD"), (x) => num(x.amount));
+  return conv + income - spent - help - saved + (withAdjust ? num(S.cfg.cashAdjust) : 0);
+}
 function debtList(R) {
   const today = todayStr();
   const paidBy = {};
@@ -516,7 +534,7 @@ function board(R) {
   </section>`;
 }
 function vHome() {
-  const R = rateInfo(), sc = salaryCalc(R), bal = eurBalance(), M = monthSummary(S.month, R), D = debtList(R), G = goalList(R);
+  const R = rateInfo(), bal = eurBalance(), cash = cashInHand(), M = monthSummary(S.month, R), D = debtList(R), G = goalList(R);
   const owe = D.filter((d) => d.dir === "owe"), owed = D.filter((d) => d.dir !== "owe");
   const sumRem = (a) => a.filter((d) => d.status !== "paid").reduce((s, d) => s + d.remDa, 0);
   const cnt = (a, st) => a.filter((d) => d.status === st).length;
@@ -526,8 +544,8 @@ function vHome() {
   return `${board(R)}
   ${monthBar()}
   <div class="tiles">
-    <button class="tile" type="button" data-act="go" data-to="money"><span class="k">${esc(t("salaryDzd"))}</span><span class="v">${esc(da(sc.da))}</span><span class="s">${esc(millions(sc.da))}</span></button>
-    <button class="tile euro" type="button" data-act="go" data-to="money"><span class="k">${esc(t("eurBank"))}</span><span class="v">${esc(eu(bal))}</span><span class="s">${esc(t("atRate", { v: da(bal * R.eur) }))}</span></button>
+    <button class="tile euro" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("eurBank"))}</span><span class="v">${esc(eu(bal))}</span><span class="s">${esc(t("atRate", { v: da(bal * R.eur) }))}</span></button>
+    <button class="tile ${cash < 0 ? "bad" : ""}" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("cashT"))}</span><span class="v">${esc(da(cash))}</span><span class="s">${esc(eu(M.eurSold))} ${esc(t("convertedM"))}</span></button>
     <button class="tile" type="button" data-act="go" data-to="family"><span class="k">${esc(t("spent"))}</span><span class="v">${esc(da(M.spent))}</span><span class="s">${esc(budgetTotal > 0 ? t("budgetUsed", { p: nf((M.spent / budgetTotal) * 100) }) : t("noBudget"))}</span></button>
     <button class="tile ${M.net < 0 ? "bad" : ""}" type="button" data-act="go" data-to="money" data-tab="months"><span class="k">${esc(t("net"))}</span><span class="v">${esc(da(M.net))}</span><span class="s">${esc(t("inOut", { a: nf(M.inn), b: nf(M.out) }))}</span></button>
     <button class="tile bad" type="button" data-act="go" data-to="debts"><span class="k">${esc(t("iOwe"))}</span><span class="v">${esc(da(sumRem(owe)))}</span><span class="s">${esc(t("overdueN", { n: cnt(owe, "overdue") }))} · ${esc(t("openN", { n: owe.filter((d) => d.status !== "paid").length }))}</span></button>
@@ -604,7 +622,7 @@ function vRates() {
 
 function vMoney() {
   const R = rateInfo(), sc = salaryCalc(R);
-  const seg = ["salary", "sales", "months"].map((k) => `<button type="button" data-act="seg" data-seg="moneyTab" data-v="${k}" aria-pressed="${S.moneyTab === k}">${esc(t("seg." + k))}</button>`).join("");
+  const seg = ["sales", "salary", "months"].map((k) => `<button type="button" data-act="seg" data-seg="moneyTab" data-v="${k}" aria-pressed="${S.moneyTab === k}">${esc(t("seg." + k))}</button>`).join("");
   let body = "";
   if (S.moneyTab === "salary") {
     const rows = S.data.salary.slice().sort((a, b) => (a.month < b.month ? 1 : -1));
@@ -615,7 +633,7 @@ function vMoney() {
       <dt>${esc(t("boardLabel"))}</dt><dd>× ${esc(nf(R.eur, 2))}</dd>
       <dt class="total">${esc(t("salaryDzd"))}</dt><dd class="total">${esc(da(sc.da))}<br><span class="small muted">${esc(millions(sc.da))}</span></dd>
       <dt>${esc(t("atOfficial"))} (${esc(nf(S.cfg.official))})</dt><dd>${esc(da(sc.official))}</dd>
-      <dt>${esc(t("extra"))}</dt><dd class="a good">+${esc(da(sc.da - sc.official))}</dd></dl></section>
+      <dt>${esc(t("extra"))}</dt><dd class="a good">+${esc(da(sc.da - sc.official))}</dd></dl><p class="small muted">${esc(t("calcNote"))}</p></section>
       <button class="btn block" type="button" data-write data-act="form" data-form="salary">${ic("plus")}${esc(t("addSalary"))}</button>
       <section class="card"><h2>${esc(t("seg.salary"))}</h2>${rows.length ? `<div class="list">${rows.map((r) => {
         const e = salaryEur(r);
@@ -627,11 +645,15 @@ function vMoney() {
     const eurRows = rows.filter((x) => (x.cur || "EUR") === "EUR");
     const eurSold = eurRows.reduce((s, x) => s + num(x.amount), 0), daEur = eurRows.reduce((s, x) => s + num(x.amount) * num(x.rate), 0);
     const daAll = rows.reduce((s, x) => s + num(x.amount) * num(x.rate), 0);
-    body = `<div class="two"><div class="stat"><span class="k">${esc(t("eurSold"))}</span><span class="v">${esc(eu(eurSold))}</span></div>
+    const bal = eurBalance(), cash = cashInHand();
+    body = `<div class="tiles"><div class="tile euro" style="cursor:default"><span class="k">${esc(t("eurBank"))}</span><span class="v">${esc(eu(bal))}</span><span class="s">${esc(t("atRate", { v: da(bal * R.eur) }))}</span></div>
+      <div class="tile ${cash < 0 ? "bad" : ""}" style="cursor:default"><span class="k">${esc(t("cashT"))}</span><span class="v">${esc(da(cash))}</span>
+        <span class="s"><button class="linkbtn" type="button" data-write data-act="cashfix">${esc(t("cashFix"))}</button></span></div></div>
+      <button class="btn block" type="button" data-write data-act="form" data-form="sale">${ic("sale")}${esc(t("addSale"))}</button>
+      <div class="two"><div class="stat"><span class="k">${esc(t("eurSold"))}</span><span class="v">${esc(eu(eurSold))}</span></div>
       <div class="stat"><span class="k">${esc(t("daReceived"))}</span><span class="v">${esc(da(daAll))}</span></div>
       <div class="stat"><span class="k">${esc(t("avgRate"))}</span><span class="v">${esc(nf(eurSold ? daEur / eurSold : 0, 2))}</span></div>
-      <div class="stat"><span class="k">${esc(t("eurBank"))}</span><span class="v">${esc(eu(eurBalance()))}</span></div></div>
-      <button class="btn block" type="button" data-write data-act="form" data-form="sale">${ic("sale")}${esc(t("addSale"))}</button>
+      <div class="stat"><span class="k">${esc(t("convertedM"))}</span><span class="v">${esc(eu(monthSummary(S.month, R).eurSold))}</span></div></div>
       <section class="card"><h2>${esc(t("seg.sales"))}</h2>${rows.length ? `<div class="list">${rows.map((x) => {
         const cur = x.cur || "EUR", mk = rateOn(x.date, cur), diff = mk ? (num(x.rate) - mk) * num(x.amount) : 0;
         return `<button class="item" type="button" data-act="edit" data-form="sale" data-id="${esc(x.id)}"><span class="t num">${esc(nf(x.amount, 2))} ${cur === "USD" ? "$" : "€"} × ${esc(nf(x.rate, 2))}</span>
@@ -781,7 +803,7 @@ function vPrefs() {
     <div class="actions"><button class="btn" type="button" data-act="backup">${ic("download")}${esc(t("backupB"))}</button>
     <button class="btn ghost" type="button" data-act="restore">${esc(t("restoreB"))}</button></div>
     <input type="file" id="restoreFile" accept=".json,application/json,text/plain" hidden></section>
-  <section class="card"><h2>${esc(t("phoneT"))}</h2><p class="small">${esc(t("phoneNote"))}</p><p class="small muted">${esc(t("version"))} 1.0</p></section>`;
+  <section class="card"><h2>${esc(t("phoneT"))}</h2><p class="small">${esc(t("phoneNote"))}</p><p class="small muted">${esc(t("version"))} 1.1</p></section>`;
 }
 
 /* ------------------------------------------------------------------ forms */
@@ -793,7 +815,7 @@ const FORMS = {
     defaults: () => { const R = rateInfo(); return { date: todayStr(), eur: R.eur || "", eurBuy: R.eur && R.buy !== R.eur ? R.buy : "", usd: R.usdEstimated ? "" : R.usd }; }, hint: { eur: "eurHint" } },
   salary: { coll: "salary", fields: [["month", "month", 1], ["usdAmt", "num", 1, null, "usd"], ["usdEur", "num", 1], ["eurReal", "num"], ["note", "text"]],
     defaults: () => ({ month: todayStr().slice(0, 7), usd: S.cfg.salaryUsd, usdEur: S.cfg.usdEur }) },
-  sale: { coll: "sales", fields: [["date", "date", 1], ["cur", "select", 1, curOpts(false)], ["amount", "num", 1, "big"], ["rate", "num", 1], ["place", "text"], ["note", "text"]],
+  sale: { coll: "sales", fields: [["cur", "select", 1, curOpts(false)], ["needDa", "num", 0], ["amount", "num", 1, "big"], ["rate", "num", 1], ["date", "date", 1], ["place", "text"], ["note", "text"]],
     defaults: () => ({ date: todayStr(), cur: "EUR", rate: rateInfo().eur || "" }) },
   expense: { coll: "expenses", fields: [["amount", "num", 1, "big"], ["kind", "select", 1, () => [["expense", t("kinds.expense")], ["income", t("kinds.income")]]],
     ["cat", "select", 0, opts("cat")], ["desc", "text"], ["who", "select", 1, whoOpts], ["date", "date", 1], ["pay", "select", 0, opts("pay")]],
@@ -839,17 +861,18 @@ function renderSheet() {
     const F = FORMS[sh.kind];
     const hints = F.hint || {};
     html = sheetHead(t("form." + sh.kind)) + `<form id="theForm" class="conv" novalidate>${F.fields.map((f) => fieldHtml(f, sh.vals) + (hints[f[0]] ? `<p class="small muted" style="margin:-4px 0 0">${esc(t(hints[f[0]]))}</p>` : "")).join("")}
+      ${sh.kind === "sale" ? `<p class="small" id="salePreview" aria-live="polite"></p>` : ""}
       <div class="actions"><button class="btn" type="submit">${esc(t("save"))}</button>${sh.id ? `<button class="btn danger" type="button" data-act="del">${esc(sh.confirm ? t("confirmDel") : t("del"))}</button>` : ""}</div>
       ${sh.id && sh.confirm && sh.note ? `<p class="small muted">${esc(sh.note)}</p>` : ""}</form>`;
-  } else if (sh.type === "cfg" || sh.type === "zakat" || sh.type === "budget") {
+  } else if (sh.type === "cfg" || sh.type === "zakat" || sh.type === "budget" || sh.type === "cashfix") {
     const fields = sh.type === "cfg"
       ? [["salaryUsd", 1], ["usdEur", 1], ["fee", 0], ["official2", 1, "official"], ["dueSoon", 1], ["meName", 0], ["wifeName", 0], ["meNameAr", 0], ["wifeNameAr", 0]]
-      : sh.type === "zakat" ? [["zCash", 0, "cash"], ["zGold", 0, "gold"], ["zGoldPrice", 1, "goldPrice"]] : [["f.budgetAmt", 0, "amount"]];
-    const title = sh.type === "cfg" ? t("money2") : sh.type === "zakat" ? t("zakat") : listLabel("cat", sh.cat);
+      : sh.type === "zakat" ? [["zCash", 0, "cash"], ["zGold", 0, "gold"], ["zGoldPrice", 1, "goldPrice"]] : sh.type === "cashfix" ? [["cashFixLabel", 1, "cash"]] : [["f.budgetAmt", 0, "amount"]];
+    const title = sh.type === "cfg" ? t("money2") : sh.type === "zakat" ? t("zakat") : sh.type === "cashfix" ? t("cashT") : listLabel("cat", sh.cat);
     html = sheetHead(title) + `<form id="theForm" class="conv" novalidate>${fields.map(([lab, req, key]) => {
       const k = key || lab, v = sh.vals[k], isText = /Name/.test(k);
       return `<div class="field"><label for="fld_${k}">${esc(t(lab))}${req ? " *" : ""}</label><input id="fld_${k}" type="text" ${isText ? 'maxlength="40"' : 'inputmode="decimal"'} autocomplete="off" value="${esc(v ?? "")}"></div>`; }).join("")}
-      <div class="actions"><button class="btn" type="submit">${esc(t("save"))}</button></div></form>`;
+      ${sh.type === "cashfix" ? `<p class="small muted">${esc(t("cashNote"))}</p>` : ""}<div class="actions"><button class="btn" type="submit">${esc(t("save"))}</button></div></form>`;
   } else if (sh.type === "debt") {
     const R = rateInfo(), d = debtList(R).find((x) => x.id === sh.id);
     if (!d) { closeSheet(); return; }
@@ -887,8 +910,32 @@ function renderSheet() {
   }
   body.innerHTML = html;
   document.getElementById("sheet").hidden = false; document.getElementById("scrim").hidden = false;
+  if (sh.type === "form" && sh.kind === "sale") salePreview();
   document.body.classList.toggle("ro", S.canWrite === false);
   if (sh.focus !== false) { const first = body.querySelector("input.big, input, select"); if (first && sh.type !== "debt" && sh.type !== "goal") setTimeout(() => first.focus({ preventScroll: true }), 60); }
+}
+function salePreview(src) {
+  const R = rateInfo(), $ = (id) => document.getElementById(id);
+  const cur = $("fld_cur") ? $("fld_cur").value : "EUR";
+  if (src === "fld_cur" && $("fld_rate")) $("fld_rate").value = String(cur === "USD" ? +R.usd.toFixed(2) : R.eur || "");
+  const rate = parseNum($("fld_rate") ? $("fld_rate").value : "");
+  if ((src === "fld_needDa" || src === "fld_rate") && $("fld_needDa") && $("fld_amount")) {
+    const need = parseNum($("fld_needDa").value);
+    if (need > 0 && rate > 0) $("fld_amount").value = String(Math.ceil((need / rate) * 100) / 100);
+  }
+  const amt = parseNum($("fld_amount") ? $("fld_amount").value : "");
+  const out = $("salePreview"); if (!out) return;
+  const parts = [];
+  if (amt > 0 && rate > 0) parts.push(t("sellGet", { v: da(amt * rate) }));
+  let over = false;
+  if (cur === "EUR") {
+    const mine = S.sheet && S.sheet.id ? num((S.data.sales.find((x) => x.id === S.sheet.id) || {}).amount) : 0;
+    const bal = eurBalance() + mine;
+    over = amt > bal + 0.001;
+    parts.push(over ? t("sellOver", { v: eu(bal) }) : t("inBank", { v: eu(bal) }));
+  }
+  out.textContent = parts.join(" · ");
+  out.style.color = over ? "var(--bad)" : "";
 }
 function openForm(kind, item, extra) {
   const F = FORMS[kind];
@@ -959,13 +1006,14 @@ async function submitForm() {
       }
     }
     if (sh.kind === "payment") out.debtId = sh.vals.debtId;
+    if (sh.kind === "sale") delete out.needDa;
     if (sh.kind === "expense" && out.kind === "income") out.cat = "";
     const keep = sh.id ? { ts: sh.vals.ts } : {};
     const ok = await saveDoc(F.coll, sh.id, { ...keep, ...out });
     if (ok) { toast(t("saved2")); closeSheet(); }
   } else {
     const keys = sh.type === "cfg" ? ["salaryUsd", "usdEur", "fee", "official", "dueSoon", "meName", "wifeName", "meNameAr", "wifeNameAr"]
-      : sh.type === "zakat" ? ["cash", "gold", "goldPrice"] : ["amount"];
+      : sh.type === "zakat" ? ["cash", "gold", "goldPrice"] : sh.type === "cashfix" ? ["cash"] : ["amount"];
     const vals = {};
     for (const k of keys) {
       const raw = read(k) || "";
@@ -979,6 +1027,7 @@ async function submitForm() {
       if (!(vals.salaryUsd > 0) || !(vals.usdEur > 0) || !(vals.official > 0)) return toast(t("required", { f: t("money2") }));
       patch = vals;
     } else if (sh.type === "zakat") patch = { zakat: vals };
+    else if (sh.type === "cashfix") patch = { cashAdjust: Math.round((vals.cash - cashInHand(false)) * 100) / 100 };
     else patch = { budgets: { ...(S.cfg.budgets || {}), [sh.cat]: vals.amount } };
     if (await saveCfg(patch)) { toast(t("saved2")); closeSheet(); render(); }
   }
@@ -1093,6 +1142,7 @@ document.addEventListener("click", (e) => {
   }
   else if (a === "debt" || a === "goal") { S.sheet = { type: a, id: el.dataset.id }; renderSheet(); }
   else if (a === "cfg") { S.sheet = { type: "cfg", vals: { ...S.cfg } }; renderSheet(); }
+  else if (a === "cashfix") { S.sheet = { type: "cashfix", vals: { cash: Math.round(cashInHand()) } }; renderSheet(); }
   else if (a === "zakat") { S.sheet = { type: "zakat", vals: { ...DEFAULTS.zakat, ...(S.cfg.zakat || {}) } }; renderSheet(); }
   else if (a === "budget") { if (S.canWrite === false) return; S.sheet = { type: "budget", cat: el.dataset.cat, vals: { amount: num((S.cfg.budgets || {})[el.dataset.cat]) || "" } }; renderSheet(); }
   else if (a === "close") closeSheet();
@@ -1105,6 +1155,7 @@ document.addEventListener("click", (e) => {
 document.addEventListener("submit", (e) => { if (e.target.id === "theForm") { e.preventDefault(); submitForm(); } });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.sheet) closeSheet(); });
 document.addEventListener("input", (e) => {
+  if (S.sheet && S.sheet.kind === "sale" && /^fld_(needDa|amount|rate|cur)$/.test(e.target.id || "")) { salePreview(e.target.id); return; }
   const k = e.target.dataset && e.target.dataset.conv; if (!k) return;
   S.conv[k] = e.target.value;
   const R = rateInfo(), v = parseNum(e.target.value) || 0;
