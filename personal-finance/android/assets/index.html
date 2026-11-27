@@ -225,6 +225,8 @@ const L = {
     converter: "Converter", eurToDa: "Euros you sell", daToEur: "Dinars to change", usdToDa: "Dollars you sell", history: "History", official: "Official",
     seg: { salary: "Salary", sales: "Conversions", months: "12 months", exp: "Expenses", rel: "Relatives", bud: "Budget", open: "Open", paid: "Paid", all: "All" },
     calc: "Salary value", atOfficial: "At the official rate", extra: "Extra from the square", salaryEur: "Salary in euros", addSalary: "Add this month's salary",
+    totalT: "All your money in dinars", totalSub: "{e} in bank + {d} in hand", cashNeg: "More spent than converted: add the euros you converted",
+    inHandNow: "Dinars in hand: {a} → after this: {b}", savedLeft: "Saved · dinars in hand now: {v}", budgetLeft: "Left in the budget", leftV: "{v} left", overV: "{v} over",
     salaryFor: "Salary for {m}", receivedOn: "received {d}", expectedOn: "expected {d}", nextSalary: "Next salary", nextSalaryLine: "{m} salary · {d}",
     inDays: "arrives in {n} days", arrivesToday: "arrives today", salaryDue: "It was due on {d}. Did it arrive? Tap to add it.",
     salaryRule: "The salary for a month arrives on day {d} of {when}. The app files it under the month you worked (for example November) and adds it to your bank and to that month's totals on the day it arrives (for example 15 December).",
@@ -262,9 +264,9 @@ const L = {
     dirs: { owe: "I owe (I borrowed)", owed: "Owed to me (I lent)" }, kinds: { expense: "Expense", income: "Income" },
     cat: { food: "Food & groceries", rent: "Rent", power: "Electricity & gas", water: "Water", net: "Internet & phone", transport: "Transport & fuel", health: "Health & pharmacy", clothes: "Clothes",
       home: "Home & furniture", me: "Personal: {me}", wife: "Personal: {wife}", gifts: "Gifts & occasions", charity: "Charity & zakat", fun: "Outings", edu: "Education", other: "Other" },
-    rel: { brother: "Brother", sister: "Sister", mother: "Mother", father: "Father", wmother: "Wife's mother", wfather: "Wife's father", wbrother: "Wife's brother", wsister: "Wife's sister",
+    rel: { brother: "Brother", sister: "Sister", mother: "Mother", father: "Father", wmother: "Wife's mother", wfather: "Wife's late father (sadaqa for his soul)", wbrother: "Wife's brother", wsister: "Wife's sister",
       uncle: "Uncle / aunt", cousin: "Cousin", friend: "Friend", neighbor: "Neighbor", colleague: "Colleague", other: "Other" },
-    help: { monthly: "Monthly support", gift: "Gift", medical: "Medical", eid: "Eid / occasion", wedding: "Wedding", emergency: "Emergency", bills: "Bills", other: "Other" },
+    help: { monthly: "Monthly support", sadaqa: "Sadaqa for the deceased", gift: "Gift", medical: "Medical", eid: "Eid / occasion", wedding: "Wedding", emergency: "Emergency", bills: "Bills", other: "Other" },
     gcat: { emergency: "Emergency fund", house: "House", car: "Car", hajj: "Hajj / Umrah", kids: "Children", edu: "Education", travel: "Travel", business: "Business", furniture: "Furniture", gold: "Gold", wedding: "Wedding", other: "Other" },
     prio: { high: "High", med: "Medium", low: "Low" },
     pay: { cash: "Cash", baridimob: "BaridiMob / CCP", edahabia: "Edahabia card", card: "Bank card", transfer: "Bank transfer", other: "Other" },
@@ -293,6 +295,8 @@ const L = {
     converter: "محول العملات", eurToDa: "أورو تبيعه", daToEur: "دينار تريد صرفه", usdToDa: "دولار تبيعه", history: "السجل", official: "الرسمي",
     seg: { salary: "الراتب", sales: "التحويلات", months: "12 شهرا", exp: "المصاريف", rel: "الأقارب", bud: "الميزانية", open: "مفتوحة", paid: "مسددة", all: "الكل" },
     calc: "قيمة الراتب", atOfficial: "بالسعر الرسمي", extra: "الفرق لصالحك من السكوار", salaryEur: "الراتب بالأورو", addSalary: "أضف راتب هذا الشهر",
+    totalT: "كل مالك بالدينار", totalSub: "{e} في البنك + {d} عندك", cashNeg: "صرفت أكثر مما حوّلت: أضف الأورو الذي حوّلته",
+    inHandNow: "الدينار عندك: {a} ← بعد هذا: {b}", savedLeft: "تم الحفظ · الدينار عندك الآن: {v}", budgetLeft: "المتبقي من الميزانية", leftV: "بقي {v}", overV: "تجاوز {v}",
     salaryFor: "راتب {m}", receivedOn: "وصل {d}", expectedOn: "متوقع {d}", nextSalary: "الراتب القادم", nextSalaryLine: "راتب {m} · {d}",
     inDays: "يصل بعد {n} يوم", arrivesToday: "يصل اليوم", salaryDue: "كان موعده {d}. هل وصل؟ اضغط لإضافته.",
     salaryRule: "راتب كل شهر يصل يوم {d} من {when}. التطبيق يسجله باسم الشهر الذي عملت فيه (مثلا نوفمبر) ويضيفه إلى البنك وإلى مجموع الشهر يوم وصوله (مثلا 15 ديسمبر).",
@@ -330,9 +334,9 @@ const L = {
     dirs: { owe: "عليّ (تسلفت)", owed: "لي (سلّفت)" }, kinds: { expense: "مصروف", income: "دخل" },
     cat: { food: "المواد الغذائية", rent: "الكراء", power: "الكهرباء والغاز", water: "الماء", net: "الأنترنت والهاتف", transport: "النقل والوقود", health: "الصحة والدواء", clothes: "الملابس",
       home: "المنزل والأثاث", me: "مصاريف {me}", wife: "مصاريف {wife}", gifts: "الهدايا والمناسبات", charity: "الصدقة والزكاة", fun: "الخرجات", edu: "التعليم", other: "أخرى" },
-    rel: { brother: "أخ", sister: "أخت", mother: "الأم", father: "الأب", wmother: "أم الزوجة", wfather: "أب الزوجة", wbrother: "أخ الزوجة", wsister: "أخت الزوجة",
+    rel: { brother: "أخ", sister: "أخت", mother: "الأم", father: "الأب", wmother: "أم الزوجة", wfather: "أب الزوجة رحمه الله (صدقة على روحه)", wbrother: "أخ الزوجة", wsister: "أخت الزوجة",
       uncle: "عم / خال", cousin: "ابن العم / الخال", friend: "صديق", neighbor: "جار", colleague: "زميل", other: "أخرى" },
-    help: { monthly: "مصروف شهري", gift: "هدية", medical: "علاج", eid: "عيد / مناسبة", wedding: "عرس", emergency: "طارئ", bills: "فواتير", other: "أخرى" },
+    help: { monthly: "مصروف شهري", sadaqa: "صدقة على روح الميت", gift: "هدية", medical: "علاج", eid: "عيد / مناسبة", wedding: "عرس", emergency: "طارئ", bills: "فواتير", other: "أخرى" },
     gcat: { emergency: "صندوق الطوارئ", house: "السكن", car: "السيارة", hajj: "الحج / العمرة", kids: "الأطفال", edu: "التعليم", travel: "السفر", business: "مشروع", furniture: "الأثاث", gold: "الذهب", wedding: "العرس", other: "أخرى" },
     prio: { high: "عالية", med: "متوسطة", low: "منخفضة" },
     pay: { cash: "نقدا", baridimob: "بريدي موب", edahabia: "البطاقة الذهبية", card: "بطاقة بنكية", transfer: "تحويل بنكي", other: "أخرى" },
@@ -575,9 +579,11 @@ function vHome() {
   const next = D.filter((d) => d.status !== "paid").sort((a, b) => (a.due || "9999") < (b.due || "9999") ? -1 : 1).slice(0, 3);
   return `${board(R)}
   ${monthBar()}
+  <button class="tile" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("totalT"))}</span><span class="v">${esc(da(bal * R.eur + cash))}</span>
+    <span class="s">${esc(t("totalSub", { e: eu(bal), d: da(cash) }))}</span></button>
   <div class="tiles">
     <button class="tile euro" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("eurBank"))}</span><span class="v">${esc(eu(bal))}</span><span class="s">${esc(t("atRate", { v: da(bal * R.eur) }))}</span></button>
-    <button class="tile ${cash < 0 ? "bad" : ""}" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("cashT"))}</span><span class="v">${esc(da(cash))}</span><span class="s">${esc(eu(M.eurSold))} ${esc(t("convertedM"))}</span></button>
+    <button class="tile ${cash < 0 ? "bad" : ""}" type="button" data-act="go" data-to="money" data-tab="sales"><span class="k">${esc(t("cashT"))}</span><span class="v">${esc(da(cash))}</span><span class="s">${esc(cash < 0 ? t("cashNeg") : eu(M.eurSold) + " " + t("convertedM"))}</span></button>
     <button class="tile" type="button" data-act="go" data-to="family"><span class="k">${esc(t("spent"))}</span><span class="v">${esc(da(M.spent))}</span><span class="s">${esc(budgetTotal > 0 ? t("budgetUsed", { p: nf((M.spent / budgetTotal) * 100) }) : t("noBudget"))}</span></button>
     <button class="tile ${M.net < 0 ? "bad" : ""}" type="button" data-act="go" data-to="money" data-tab="months"><span class="k">${esc(t("net"))}</span><span class="v">${esc(da(M.net))}</span><span class="s">${esc(t("inOut", { a: nf(M.inn), b: nf(M.out) }))}</span></button>
     <button class="tile bad" type="button" data-act="go" data-to="debts"><span class="k">${esc(t("iOwe"))}</span><span class="v">${esc(da(sumRem(owe)))}</span><span class="s">${esc(t("overdueN", { n: cnt(owe, "overdue") }))} · ${esc(t("openN", { n: owe.filter((d) => d.status !== "paid").length }))}</span></button>
@@ -758,13 +764,14 @@ function vFamily() {
     const spentC = {}; for (const x of ex) { const k = cats.includes(x.cat) ? x.cat : "other"; spentC[k] = (spentC[k] || 0) + num(x.amount); }
     const B = S.cfg.budgets || {};
     const totB = cats.reduce((s, k) => s + num(B[k]), 0), totS = ex.reduce((s, x) => s + num(x.amount), 0);
-    body = `<div class="two"><div class="stat"><span class="k">${esc(t("form.budget"))}</span><span class="v">${esc(da(totB))}</span></div>
-      <div class="stat"><span class="k">${esc(t("spent"))}</span><span class="v">${esc(da(totS))}</span></div></div>
+    body = `<div class="two"><div class="stat"><span class="k">${esc(t("spent"))}</span><span class="v">${esc(da(totS))}</span><span class="small muted">/ ${esc(da(totB))}</span></div>
+      <div class="stat"><span class="k">${esc(t("budgetLeft"))}</span><span class="v" style="color:${totB - totS < 0 ? "var(--bad)" : "var(--good)"}">${esc(da(totB - totS))}</span></div></div>
       <p class="small muted" data-write>${esc(t("setBudget"))}</p>
       <section class="card"><div class="list">${cats.map((k) => {
         const b = num(B[k]), s = spentC[k] || 0, p = b > 0 ? s / b : 0;
         const tone = b > 0 ? (p > 1 ? "bad" : p >= 0.8 ? "warn" : "") : "";
-        const tag = b > 0 ? (p > 1 ? `<span class="tag bad">${esc(t("over"))}</span>` : p >= 0.8 ? `<span class="tag warn">${esc(t("near"))}</span>` : `<span class="tag good">${esc(t("ok"))}</span>`) : "";
+        const left = nf(Math.abs(b - s));
+        const tag = b > 0 ? (p > 1 ? `<span class="tag bad">${esc(t("overV", { v: left }))}</span>` : `<span class="tag ${p >= 0.8 ? "warn" : "good"}">${esc(t("leftV", { v: left }))}</span>`) : "";
         return `<button class="item" type="button" data-act="budget" data-cat="${esc(k)}"><span class="t">${esc(listLabel("cat", k))}</span>
           <span class="a">${esc(nf(s))}${b > 0 ? ` <span class="muted small">/ ${esc(nf(b))}</span>` : ""}</span>
           <span class="m" style="display:grid;grid-template-columns:1fr auto;gap:8px">${b > 0 ? `<span class="bar ${tone}"><i style="width:${Math.min(100, p * 100).toFixed(1)}%"></i></span>${tag}` : `<span>${esc(t("noBudget"))}</span>`}</span></button>`; }).join("")}</div></section>`;
@@ -841,7 +848,7 @@ function vPrefs() {
     <div class="actions"><button class="btn" type="button" data-act="backup">${ic("download")}${esc(t("backupB"))}</button>
     <button class="btn ghost" type="button" data-act="restore">${esc(t("restoreB"))}</button></div>
     <input type="file" id="restoreFile" accept=".json,application/json,text/plain" hidden></section>
-  <section class="card"><h2>${esc(t("phoneT"))}</h2><p class="small">${esc(t("phoneNote"))}</p><p class="small muted">${esc(t("version"))} 1.2</p></section>`;
+  <section class="card"><h2>${esc(t("phoneT"))}</h2><p class="small">${esc(t("phoneNote"))}</p><p class="small muted">${esc(t("version"))} 1.3</p></section>`;
 }
 
 /* ------------------------------------------------------------------ forms */
@@ -900,6 +907,7 @@ function renderSheet() {
     const hints = F.hint || {};
     html = sheetHead(t("form." + sh.kind)) + `<form id="theForm" class="conv" novalidate>${F.fields.map((f) => fieldHtml(f, sh.vals) + (hints[f[0]] ? `<p class="small muted" style="margin:-4px 0 0">${esc(t(hints[f[0]]))}</p>` : "")).join("")}
       ${sh.kind === "sale" ? `<p class="small" id="salePreview" aria-live="polite"></p>` : ""}
+      ${sh.kind === "expense" || sh.kind === "help" ? `<p class="small" id="cashPreview" aria-live="polite"></p>` : ""}
       <div class="actions"><button class="btn" type="submit">${esc(t("save"))}</button>${sh.id ? `<button class="btn danger" type="button" data-act="del">${esc(sh.confirm ? t("confirmDel") : t("del"))}</button>` : ""}</div>
       ${sh.id && sh.confirm && sh.note ? `<p class="small muted">${esc(sh.note)}</p>` : ""}</form>`;
   } else if (sh.type === "cfg" || sh.type === "zakat" || sh.type === "budget" || sh.type === "cashfix") {
@@ -949,8 +957,23 @@ function renderSheet() {
   body.innerHTML = html;
   document.getElementById("sheet").hidden = false; document.getElementById("scrim").hidden = false;
   if (sh.type === "form" && sh.kind === "sale") salePreview();
+  if (sh.type === "form" && (sh.kind === "expense" || sh.kind === "help")) cashPreview();
   document.body.classList.toggle("ro", S.canWrite === false);
   if (sh.focus !== false) { const first = body.querySelector("input.big, input, select"); if (first && sh.type !== "debt" && sh.type !== "goal") setTimeout(() => first.focus({ preventScroll: true }), 60); }
+}
+function cashAfter(kind, amount, isIncome, id) {
+  const coll = FORMS[kind].coll, prev = id ? S.data[coll].find((x) => x.id === id) : null;
+  const prevEffect = prev ? (prev.kind === "income" ? num(prev.amount) : -num(prev.amount)) : 0;
+  const now = cashInHand();
+  return { now, after: now - prevEffect + (isIncome ? amount : -amount) };
+}
+function cashPreview() {
+  const $ = (id) => document.getElementById(id), out = $("cashPreview"); if (!out || !S.sheet) return;
+  const amt = parseNum($("fld_amount") ? $("fld_amount").value : "") || 0;
+  const inc = S.sheet.kind === "expense" && $("fld_kind") && $("fld_kind").value === "income";
+  const c = cashAfter(S.sheet.kind, amt, inc, S.sheet.id);
+  out.textContent = t("inHandNow", { a: da(c.now), b: da(c.after) });
+  out.style.color = c.after < 0 ? "var(--bad)" : "";
 }
 function salePreview(src) {
   const R = rateInfo(), $ = (id) => document.getElementById(id);
@@ -1048,8 +1071,9 @@ async function submitForm() {
     if (sh.kind === "salary" && !out.received) out.received = payDate(out.month);
     if (sh.kind === "expense" && out.kind === "income") out.cat = "";
     const keep = sh.id ? { ts: sh.vals.ts } : {};
+    const moves = sh.kind === "expense" || sh.kind === "help" ? cashAfter(sh.kind, num(out.amount), out.kind === "income", sh.id).after : null;
     const ok = await saveDoc(F.coll, sh.id, { ...keep, ...out });
-    if (ok) { toast(t("saved2")); closeSheet(); }
+    if (ok) { toast(moves === null ? t("saved2") : t("savedLeft", { v: da(moves) })); closeSheet(); }
   } else {
     const keys = sh.type === "cfg" ? ["salaryUsd", "usdEur", "payDay", "payLag", "fee", "official", "dueSoon", "meName", "wifeName", "meNameAr", "wifeNameAr"]
       : sh.type === "zakat" ? ["cash", "gold", "goldPrice"] : sh.type === "cashfix" ? ["cash"] : ["amount"];
@@ -1197,6 +1221,11 @@ document.addEventListener("submit", (e) => { if (e.target.id === "theForm") { e.
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && S.sheet) closeSheet(); });
 document.addEventListener("input", (e) => {
   if (S.sheet && S.sheet.kind === "sale" && /^fld_(needDa|amount|rate|cur)$/.test(e.target.id || "")) { salePreview(e.target.id); return; }
+  if (S.sheet && (S.sheet.kind === "expense" || S.sheet.kind === "help") && /^fld_(amount|kind|rel)$/.test(e.target.id || "")) {
+    const ht = document.getElementById("fld_htype");
+    if (e.target.id === "fld_rel" && e.target.value === "wfather" && ht) ht.value = "sadaqa";
+    cashPreview(); return;
+  }
   const k = e.target.dataset && e.target.dataset.conv; if (!k) return;
   S.conv[k] = e.target.value;
   const R = rateInfo(), v = parseNum(e.target.value) || 0;
